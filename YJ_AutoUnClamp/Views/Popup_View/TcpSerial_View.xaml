@@ -10,8 +10,8 @@
         xmlns:utils="clr-namespace:YJ_AutoUnClamp.Utils"
         utils:WindowBlur.IsEnabled="True"
         ResizeMode="NoResize" WindowStyle="None"
-        Background="Transparent" AllowsTransparency="True" WindowStartupLocation="CenterScreen"
-        Name="SerialPort" Width="1000" Height="850">
+        Background="Transparent" AllowsTransparency="True" WindowStartupLocation="CenterScreen" Top="8" Left="12"
+        Name="SerialPort" Width="1000" Height="750">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="0.05*"/>
@@ -60,31 +60,56 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 
-                <Label Content="Motion In Y" Grid.Row="0" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="Motion Out X" Grid.Row="1" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="Motion Z" Grid.Row="2" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="Motion Lift 1" Grid.Row="3" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="Motion Lift 2" Grid.Row="4" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="Motion Lift 3" Grid.Row="5" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="Barcode Port" Grid.Row="0" Grid.Column="2" Style="{StaticResource SerialPort_LabelStyle}"/>
-                <Label Content="NFC Port" Grid.Row="1" Grid.Column="2" Style="{StaticResource SerialPort_LabelStyle}"/>
-                
-                <telerik:RadComboBox Grid.Column="3" Style="{StaticResource SerialPort_CboxStyle}"
-                                     ItemsSource="{Binding PortNames}" SelectedItem="{Binding BarCodePort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                <telerik:RadComboBox Grid.Column="3" Grid.Row="1" Style="{StaticResource SerialPort_CboxStyle}"
-                                     ItemsSource="{Binding PortNames}" SelectedItem="{Binding LabelPrintPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                <telerik:RadWatermarkTextBox Grid.Row="0" Grid.Column="1" Text="{Binding MotionIP[0], UpdateSourceTrigger=PropertyChanged}" 
-                                             FontWeight="SemiBold" FontSize="20" Margin="0,20,10,20" telerik:StyleManager.Theme="Material" HorizontalContentAlignment="Center"/>
-                <telerik:RadWatermarkTextBox Grid.Row="1" Grid.Column="1" Text="{Binding MotionIP[1], UpdateSourceTrigger=PropertyChanged}" 
-                                             FontWeight="SemiBold" FontSize="20" Margin="0,20,10,20" telerik:StyleManager.Theme="Material" HorizontalContentAlignment="Center"/>
-                <telerik:RadWatermarkTextBox Grid.Row="2" Grid.Column="1" Text="{Binding MotionIP[2], UpdateSourceTrigger=PropertyChanged}" 
-                              FontWeight="SemiBold" FontSize="20" Margin="0,20,10,20" telerik:StyleManager.Theme="Material" HorizontalContentAlignment="Center"/>
-                <telerik:RadWatermarkTextBox Grid.Row="3" Grid.Column="1" Text="{Binding MotionIP[3], UpdateSourceTrigger=PropertyChanged}" 
-                              FontWeight="SemiBold" FontSize="20" Margin="0,20,10,20" telerik:StyleManager.Theme="Material" HorizontalContentAlignment="Center"/>
-                <telerik:RadWatermarkTextBox Grid.Row="4" Grid.Column="1" Text="{Binding MotionIP[4], UpdateSourceTrigger=PropertyChanged}" 
-                              FontWeight="SemiBold" FontSize="20" Margin="0,20,10,20" telerik:StyleManager.Theme="Material" HorizontalContentAlignment="Center"/>
-                <telerik:RadWatermarkTextBox Grid.Row="5" Grid.Column="1" Text="{Binding MotionIP[5], UpdateSourceTrigger=PropertyChanged}" 
-                              FontWeight="SemiBold" FontSize="20" Margin="0,20,10,20" telerik:StyleManager.Theme="Material" HorizontalContentAlignment="Center"/>
+                <Label Content="Barcode Port 1" Grid.Row="0" Grid.Column="0" Style="{StaticResource SerialPort_LabelStyle}"/>
+                <Label Content="Barcode Port 2" Grid.Row="1" Grid.Column="0" Style="{StaticResource SerialPort_LabelStyle}"/>
+                <Label Content="Barcode Port 3" Grid.Row="2" Grid.Column="0" Style="{StaticResource SerialPort_LabelStyle}"/>
+                <Label Content="NFC Port" Grid.Row="3" Grid.Column="0" Style="{StaticResource SerialPort_LabelStyle}"/>
+
+                <telerik:RadComboBox Grid.Column="1" Style="{StaticResource SerialPort_CboxStyle}"
+                                     ItemsSource="{Binding PortNames}" SelectedItem="{Binding BarCodePort[0], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <telerik:RadComboBox Grid.Column="1" Grid.Row="1" Style="{StaticResource SerialPort_CboxStyle}"
+                                     ItemsSource="{Binding PortNames}" SelectedItem="{Binding BarCodePort[1], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <telerik:RadComboBox Grid.Column="1" Grid.Row="2" Style="{StaticResource SerialPort_CboxStyle}"
+                                    ItemsSource="{Binding PortNames}" SelectedItem="{Binding BarCodePort[2], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <telerik:RadComboBox Grid.Column="1" Grid.Row="3" Style="{StaticResource SerialPort_CboxStyle}"
+                                    ItemsSource="{Binding PortNames}" SelectedItem="{Binding BarCodePort[3], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <telerik:RadRadioButton Grid.Column="2" Grid.Row="0" Content="Port Open" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                                        CommandParameter="BcrPort1" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                <telerik:RadRadioButton Grid.Column="2" Grid.Row="1" Content="Port Open" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                                        CommandParameter="BcrPort2" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                <telerik:RadRadioButton Grid.Column="2" Grid.Row="2" Content="Port Open" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                                        CommandParameter="BcrPort3" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                <telerik:RadRadioButton Grid.Column="2" Grid.Row="3" Content="Port Open" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                        CommandParameter="NfcPort" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+
+                <StackPanel Grid.Column="3" Grid.Row="0">
+                    <telerik:RadRadioButton  Content="BCR Test" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                                        CommandParameter="BcrTest1" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                    <Label Content="{Binding bcrData[0]}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20" />
+                </StackPanel>
+                <StackPanel Grid.Column="3" Grid.Row="1">
+                    <telerik:RadRadioButton  Content="BCR Test" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                        CommandParameter="BcrTest2" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                    <Label Content="{Binding bcrData[1]}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20" />
+                </StackPanel>
+                <StackPanel Grid.Column="3" Grid.Row="2">
+                    <telerik:RadRadioButton  Content="BCR Test" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                        CommandParameter="BcrTest3" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                    <Label Content="{Binding bcrData[2]}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20" />
+                </StackPanel>
+                <StackPanel Grid.Column="3" Grid.Row="3">
+                    <telerik:RadRadioButton  Content="NFC Test" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                        CommandParameter="NfcTest" Command="{Binding BcrPort_Command}" FontSize="20" FontWeight="Bold"/>
+                    <Label Content="{Binding NfcData}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="20" />
+                </StackPanel>
+
+                <telerik:RadRadioButton Grid.Column="0" Grid.Row="4" Content="TCP Send" Margin="5" Style="{StaticResource ModeSelect_RadioStyle}" 
+                        CommandParameter="SEND" Command="{Binding TCP_Command}" FontSize="20" FontWeight="Bold"/>
+                <StackPanel Grid.Column="1" Grid.Row="4" Orientation="Vertical" Margin="5">
+                    <TextBox Text="{Binding TcpSendData , UpdateSourceTrigger=PropertyChanged}" FontSize="20" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                    <Label Content="{Binding TcpReceiveData , UpdateSourceTrigger=PropertyChanged}" FontSize="20" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                </StackPanel>
             </Grid>
         </Border>
         <!--Save / Exit-->

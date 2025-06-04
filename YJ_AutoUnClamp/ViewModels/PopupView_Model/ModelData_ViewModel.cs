@@ -109,7 +109,7 @@ namespace YJ_AutoUnClamp.ViewModels
             catch (Exception ex)
             {
                 // 예외 처리
-                MessageBox.Show($"An error occurred while loading the model file: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Global.instance.ShowMessagebox($"An error occurred while loading the model file: {ex.Message}");
             }
         }
         private void OnModelDelete_Command(object obj)

@@ -53,16 +53,13 @@ namespace YJ_AutoUnClamp.ViewModels
 
             for (int i = 0; i < (int)ServoSlave_List.Max; i++)
             {
-                if (i != (int)ServoSlave_List.Top_CV_X)
+                ServoSlaves.Add(new ServoSlaveViewModel()
                 {
-                    ServoSlaves.Add(new ServoSlaveViewModel()
-                    {
-                        Name = ((ServoSlave_List)i).ToString().Replace("_", " "),
-                        Color = "White",
-                        SlaveID = i,
-                        IsChecked = false
-                    });
-                }
+                    Name = ((ServoSlave_List)i).ToString().Replace("_", " "),
+                    Color = "White",
+                    SlaveID = i,
+                    IsChecked = false
+                });
             }
         }
         private async void OnServo_Command(object obj)
@@ -84,8 +81,6 @@ namespace YJ_AutoUnClamp.ViewModels
                         slave.Color = result ? "Bisque" : "White";
                         slave.IsChecked = false;
                     }
-                    if (SingletonManager.instance.Servo_Model[(int)ServoSlave_List.Top_CV_X].IsServoOn == false)
-                        SingletonManager.instance.Ez_Model.SetServoOn((int)ServoSlave_List.Top_CV_X, true);
                     break;
                 case "Off":
                     string failedSlaves = string.Empty;
@@ -104,7 +99,27 @@ namespace YJ_AutoUnClamp.ViewModels
                     {
                         string failedMessage = $"Failed to turn off the following Servo: {failedSlaves}";
                         Global.Mlog.Error(failedMessage);
-                        System.Windows.MessageBox.Show(failedMessage, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        Global.instance.ShowMessagebox(failedMessage);
+                    }
+                    break;
+                case "AlarmReset":
+                    string failedSlave = string.Empty;
+                    foreach (var slave in ServoSlaves.Where(s => s.IsChecked))
+                    {
+                        result = SingletonManager.instance.Ez_Model.ServoAlarmReset(slave.SlaveID);
+                        if (!result)
+                        {
+                            if (!string.IsNullOrEmpty(failedSlave))
+                                failedSlave += ", ";
+                            failedSlave += slave.Name;
+                        }
+                        slave.IsChecked = false;
+                    }
+                    if (!string.IsNullOrEmpty(failedSlave))
+                    {
+                        string failedMessage = $"Failed to Alam Reset the following Servo: {failedSlave}";
+                        Global.Mlog.Error(failedMessage);
+                        Global.instance.ShowMessagebox(failedMessage);
                     }
                     break;
                 case "Origin":
@@ -112,9 +127,10 @@ namespace YJ_AutoUnClamp.ViewModels
                     // 선택된 슬레이브 필터링
                     var selectedSlaves = ServoSlaves.Where(slave => slave.IsChecked).ToList();
                     var failedSlavesList = new List<string>();
-                    SingletonManager.instance.Ez_Dio.Set_HandlerUpDown(true);
+                    SingletonManager.instance.Ez_Dio.Set_HandlerInit(); 
+                    await Task.Delay(1000);
                     // Servo Origin
-                    var Slave = ServoSlaves[(int)ServoSlave_List.Out_Z_Handler_Z];
+                    var Slave = ServoSlaves[(int)ServoSlave_List.In_Z_Handler_Z];
                     if (Slave.IsChecked == true)
                     {
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
@@ -140,7 +156,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         }
                     }
                         
-                    Slave = ServoSlaves[(int)ServoSlave_List.Out_Y_Handler_Y];
+                    Slave = ServoSlaves[(int)ServoSlave_List.In_Y_Handler_Y];
                     if (Slave.IsChecked == true)
                     {
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
@@ -184,7 +200,7 @@ namespace YJ_AutoUnClamp.ViewModels
                     {
                         string failedMessage = $"Failed to complete origin operation for the following Servo(s): {string.Join(", ", failedSlavesList)}";
                         Global.Mlog.Error(failedMessage);
-                        MessageBox.Show(failedMessage, "Origin Fail", MessageBoxButton.OK, MessageBoxImage.Error);
+                        Global.instance.ShowMessagebox(failedMessage);
                     }
 
                     BusyContent = string.Empty;

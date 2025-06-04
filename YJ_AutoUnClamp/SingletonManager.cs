@@ -1,14 +1,14 @@
 ﻿using Common.Managers;
 using Common.Mvvm;
-using Lmi3d.GoSdk;
-using Lmi3d.Zen;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Telerik.Windows.Data;
@@ -31,7 +31,12 @@ namespace YJ_AutoUnClamp
         private BackgroundWorker UnitsProcThread;
         public bool IsWorkingUnitsProcThread = true;
         public bool IsSafetyInterLock = false;
-        public bool IsInspectionStart = false;
+        private bool _IsInspectionStart = false;
+        public bool IsInspectionStart
+        {
+            get { return _IsInspectionStart; }
+            set { SetValue(ref _IsInspectionStart, value); }
+        }
         private msgQueue SequenceQueue; // Sequence 관련 Q
 
         // Out Y축 이동시 사용되는 변수
@@ -41,36 +46,41 @@ namespace YJ_AutoUnClamp
             get { return _IsY_PickupColl; }
             set { SetValue(ref _IsY_PickupColl, value); }
         }
-        //private int[] _LoadFloor = { 0, 0, 0 };
-        //public int[] LoadFloor
-        //{
-        //    get { return _LoadFloor; }
-        //    set { SetValue(ref _LoadFloor, value); }
-        //}
-        public ObservableCollection<int> LoadFloor { get; set; }
-        public int LoadStageNo = 0;
+        public ObservableCollection<int> UnLoadFloor { get; set; }
+        public ObservableCollection<Lift_Model> Display_Lift { get; set; }
+        public int UnLoadStageNo = 0;
         public bool BottomClampDone = false;
         public bool BottomClampNG = false;
-        public bool UnitLastPositionSet = false;
         // 7단 Loading완료 변수 
         public bool[] LoadComplete = { false, false, false };
+        public string Nfc_Data = string.Empty;
+
+        private bool _IsTcpConnected = false;
+        public bool IsTcpConnected
+        {
+            get { return _IsTcpConnected; }
+            set { SetValue(ref _IsTcpConnected, value); }
+        }
         // Default Infomation
-        public EquipmentMode EquipmentMode { get; set; } = EquipmentMode.Dry;
+        public EquipmentMode EquipmentMode { get; set; } = EquipmentMode.Auto;
 
         #region // Properties
-        public NmcDio_Model Dio { get; set; }
-        public NMC_Model NMC_Model { get; set; }
         public EziDio_Model Ez_Dio { get; set; }
         public EzMotion_Model_E Ez_Model { get; set; }
-        public Serial_Model Barcode_Model { get; set; }
-        public Serial_Model LabelPrint_Model { get; set; }
+        public Serial_Model[] SerialModel { get; set; }
         public RadObservableCollection<Unit_Model> Unit_Model { get; set; }
         public RadObservableCollection<Servo_Model> Servo_Model { get; set; }
         public RadObservableCollection<Channel_Model> Channel_Model { get; set; }
         public Dictionary<string, double> Teaching_Data { get; set; }
         public ObservableCollection<SpecData_Model> Spec_Data { get; set; }
         public ModelData_Model Current_Model { get; set; }
+        public SystemData_Model SystemModel { get; set; }
+        public Http_Model HttpModel { get; set; }
+        public Aging_Model AgingModel { get; set; }
+        public HttpJson_Model HttpJsonModel { get; set; }
+        public HttpClient HttpClient { get; set; }
 
+        public TcpClient_Model TcpClient { get; set; }
 
         #endregion
         #region // UI Properties
@@ -83,24 +93,44 @@ namespace YJ_AutoUnClamp
             SequenceQueue = new msgQueue();
             Unit_Model = new RadObservableCollection<Unit_Model>();
             Servo_Model = new RadObservableCollection<Servo_Model>();
-            NMC_Model = new NMC_Model();
-            Dio = new NmcDio_Model();
             Ez_Model = new EzMotion_Model_E();
             Ez_Dio = new EziDio_Model();
             DisplayUI_Dio = new RadObservableCollection<bool>();
             Channel_Model = new RadObservableCollection<Channel_Model>();
             Teaching_Data = new Dictionary<string, double>();
-            Barcode_Model = new Serial_Model();
-            LabelPrint_Model = new Serial_Model();
+            SerialModel = new Serial_Model[(int)Serial_Model.SerialIndex.Max];
             Current_Model = new ModelData_Model();
             Spec_Data = new ObservableCollection<SpecData_Model>();
+            SystemModel = new SystemData_Model();
+            HttpModel = new Http_Model();
+            AgingModel = new Aging_Model();
+            HttpJsonModel = new HttpJson_Model();
+            HttpClient = new HttpClient();
+            TcpClient = new TcpClient_Model();
 
-            LoadFloor = new ObservableCollection<int>();
+            UnLoadFloor = new ObservableCollection<int>();
+            for (int i = 0; i < (int)Lift_Index.Max; i++)
+                UnLoadFloor.Add(0);
+
+            for(int i=0; i< (int)Serial_Model.SerialIndex.Max; i++)
+            {
+                SerialModel[i] = new Serial_Model();
+            }
+            Display_Lift = new ObservableCollection<Lift_Model>();
             for (int i = 0; i < 3; i++)
-                LoadFloor.Add(0);
+                Display_Lift.Add(new Lift_Model("LIFT" + (i + 1)));
+
+            // Channel Model 초기화
+            for (int i = 0; i < (int)ChannelList.Max; i++)
+            {
+                Channel_Model.Add(new Channel_Model((ChannelList)i));
+            }
+            HttpClient.Timeout = TimeSpan.FromSeconds(2);
         }
-        public void Run()
+        public async void Run()
         {
+            //BusyContent
+            Global.instance.BusyContent = "Program Initialize...";
             // Load System Files.
             LoadSystemFiles();
             // Unit & Servo Init 
@@ -108,15 +138,19 @@ namespace YJ_AutoUnClamp
             // Motion Init
             Motion_Init();
             // Dio Init
-            DioBoard_Init();
+            await DioBoard_Init();
             // Serial Port Init : Barcode, Label Print
             SerialPort_init();
-            // Load Model Data Init. CurrentModel, Teaching, Velocity
-            ModelData_Init();
-            // Gocator Init
-            Gocator_Init();
+            // Load Teaching Data
+            LoadTeachFile();
+            // Load Velocity Data
+            LoadVelocityFiles();
             // Background Thread Start
             BackgroundThread_Init();
+            Global.instance.BusyStatus = false;
+            Global.instance.BusyContent = string.Empty;
+
+            TcpClient.Connect("192.168.10.20", 8000);
         }
         private void LoadSystemFiles()
         {
@@ -147,38 +181,38 @@ namespace YJ_AutoUnClamp
             // Teach 폴더가 없으면 생성
             if (!Directory.Exists(teachFolder))
                 Directory.CreateDirectory(teachFolder);
-        }
-        public void ModelData_Init()
-        {
-            // 현재 모델 초기화. Spec, Job, Teach File Load
+
             var myIni = new IniFile(Global.instance.IniSystemPath);
             string section = "SYSTEM";
-            string currentModel = myIni.Read("CURRENT_MODEL", section);
-            
-            // Current Model Data Load
-            string modelFilePath = Path.Combine(Global.instance.IniModelPath, currentModel);
-            section = "ModelData";
-            var iniModelFile = new IniFile(modelFilePath);
+            string valus = myIni.Read("BARCODE_USE", section);
+            SystemModel.BcrUseNotUse = valus;
 
-            Current_Model.ModelFileName = currentModel;
-            Current_Model.SpecFileName = iniModelFile.Read("SpecFileName", section);
-            Current_Model.TeachFileName = iniModelFile.Read("TeachFileName", section);
-            Current_Model.JobFileName = iniModelFile.Read("JobFileName", section);
+            valus = myIni.Read("UNLOAD_COUNT", section);
+            if (string.IsNullOrEmpty(valus))
+                Channel_Model[0].UnLoadCount = "0";
+            else
+                Channel_Model[0].UnLoadCount = valus;
 
-            // Load Teaching Data
-            LoadTeachFile();
+            valus = myIni.Read("NFC_USE", section);
+            SystemModel.NfcUseNotUse = valus;
 
-            // Load Velocity Data
-            LoadVelocityFiles();
+            valus = myIni.Read("AGINT_TIME", section);
+            SystemModel.AgingTime = valus;
+
+            valus = myIni.Read("TOP_CODE", section);
+            SystemModel.TopCode = valus;
+
+            valus = myIni.Read("AGINT_BARCODE_FILE_PATH", section);
+            SystemModel.AgingBarcodFilePath = valus;
         }
        
         public void LoadTeachFile()
         {
             // Teaching Data 섹션 데이터 로드
-            string teachFilePath = Path.Combine(Global.instance.IniTeachPath, "Teaching.ini");
+            string teachFilePath = Path.Combine(Global.instance.IniTeachPath);
             var iniTeachFile = new IniFile(teachFilePath);
 
-            string[] teachSection = { "Top_X_Handler", "Out_Y_Handler", "Out_Z_Handler", "Lift" };
+            string[] teachSection = { "Top_X", "In_Y", "In_Z", "Lift" };
             Teaching_Data.Clear();
             foreach (var sectionName in teachSection)
             {
@@ -259,61 +293,53 @@ namespace YJ_AutoUnClamp
             // Serial 설정 파일 경로
             var myIni = new IniFile(Global.instance.IniSystemPath);
             string section = "SERIAL";
-
+            string key = "";
+            string massage = "";
             // Barcode Serial Port Init
-            string bcrPort = myIni.Read("BARCODE_PORT", section);
-            Barcode_Model.PortName = "BarCode";
-            Barcode_Model.Port = bcrPort;
 
-            if(Barcode_Model.Open() == false)
-                MessageBox.Show("BCR Port open fail.", "BCR Open Fail", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            // Label Print Serial Port Init
-            string labelPort = myIni.Read("LABELPRINT_PORT", section);
-            LabelPrint_Model.PortName = "Label Print";
-            LabelPrint_Model.Port = labelPort;
-            if (LabelPrint_Model.Open() == false)
-                MessageBox.Show("LabelPrint Port open fail.", "LabelPrint Open Fail", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        private void Gocator_Init()
-        {
-            //BusyContent
-            Global.instance.BusyContent = "Gocator Connecting...";
-
-            KApiLib.Construct();
-            GoSdkLib.Construct();
-
-            // Gocator 설정 파일 경로
-            var myIni = new IniFile(Global.instance.IniSystemPath);
-            string section = "TCP";
-
-            // Gocator IP 읽기
-            string gocator_front = myIni.Read("GOCATOR_FRONT_IP", section);
-            string gocator_rear = myIni.Read("GOCATOR_REAR_IP", section);
-
-            // 기본 IP 주소 설정
-            if (string.IsNullOrEmpty(gocator_front))
+            for (int i = 0; i < (int)Serial_Model.SerialIndex.Max; i++)
             {
-                gocator_front = "192.168.1.5";
-            }
+                if (i == (int)Serial_Model.SerialIndex.Nfc)
+                {
+                    // NFC는 별도로 처리
+                    key = "NFC_PORT";
+                    string nfcPort = myIni.Read(key, section);
+                    SerialModel[i].PortName = key;
+                    SerialModel[i].Port = nfcPort;
+                    if (SerialModel[i].Open() == false)
+                        massage += nfcPort + "NFC Open Fail Port open fail.\r\n";
+                    continue;
+                }
+                else
+                {
+                    key = $"BARCODE_PORT_{i + 1}";
+                    string bcrPort = myIni.Read(key, section);
+                    SerialModel[i].PortName = key;
+                    SerialModel[i].Port = bcrPort;
 
-            if (string.IsNullOrEmpty(gocator_rear))
-            {
-                gocator_rear = "192.168.1.6";
+                    if (SerialModel[i].Open() == false)
+                        massage += bcrPort + "BCR Open Fail Port open fail.\r\n";
+                }
             }
+            if (string.IsNullOrEmpty(massage)== false)
+                Global.instance.ShowMessagebox(massage);
         }
-        private void DioBoard_Init()
+        
+        private async Task DioBoard_Init()
         {
             //BusyContent
             Global.instance.BusyContent = "Dio Board Connecting...";
             
             for (int i =0; i < (int)DI_MAP.DI_MAX / 16; i++)
             {
-                Ez_Dio.Connect(i);
+                await Ez_Dio.Connect(i);
             }
 
             for (int i = 0; i < Ez_Dio.DisplayDio_List.Count + (int)EziDio_Model.DisplayExist_List.Max; i++)
                 DisplayUI_Dio.Add(false);
+
+            // Tower Lamp Init
+            Global.instance.Set_TowerLaamp(Global.TowerLampType.Init);
         }
         private void Motion_Init()
         {
@@ -326,15 +352,15 @@ namespace YJ_AutoUnClamp
                 {
                     if (string.IsNullOrEmpty(error) == false)
                         error += ", ";
-                    error += (ServoSlave_List.Top_X_Handler_X + i).ToString();
+                    error += ((ServoSlave_List) i).ToString();
                 }
             }
             Global.instance.BusyStatus = false;
             Global.instance.BusyContent = string.Empty;
             if (string.IsNullOrEmpty(error) == false)
             {
-                error += "Ez Motion Connect Fail";
-                MessageBox.Show(error, "Ez Motion", MessageBoxButton.OK, MessageBoxImage.Error);
+                error += " Ez Motion Motion Connect Fail";
+                Global.instance.ShowMessagebox(error);
             }
         }
         private void Unit_Init()
@@ -357,6 +383,7 @@ namespace YJ_AutoUnClamp
                     {
                         Unit_Model[i].ServoNames.Add((ServoSlave_List)j);
                     }
+                    Unit_Model[i].SetLastStep();
                 }
             }
             // Servo Model 초기화
@@ -364,11 +391,7 @@ namespace YJ_AutoUnClamp
             {
                 Servo_Model.Add(new Servo_Model((ServoSlave_List)i));
             }
-            // Channel Model 초기화
-            for(int i = 0; i < (int)ChannelList.Max; i++)
-            {
-                Channel_Model.Add(new Channel_Model((ChannelList)i));
-            }
+            
         }
         // Background Worker
         private void BackgroundThread_Init()
@@ -440,6 +463,12 @@ namespace YJ_AutoUnClamp
                     // 데이터 송신 외에는 아래의 상태 루프를 반복적으로 수행
                     if (IsWorkingUnitsProcThread == true)
                     {
+                        if (!Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_OP_EMERGENCY_FEEDBACK]
+                            || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_OP_EMERGENCY_FEEDBACK])
+                        {
+                            Global.instance.SafetyErrorMessage = "EMERGENCY Button Operation! ";
+                            //IsSafetyInterLock = true;
+                        }
                         if (IsSafetyInterLock == true)
                         {
                             IsWorkingUnitsProcThread = false;
@@ -448,7 +477,7 @@ namespace YJ_AutoUnClamp
                                 (ThreadStart)(() =>
                                 {
                                     // Todo : Interlock Loop Stop. 진행중인 작업 모두 정지
-                                    
+                                    Global.instance.InspectionStop();
                                     // Safety Popup
                                     Window window = new Safety_View();
                                     Safety_ViewModel safety_ViewModel = new Safety_ViewModel();
@@ -470,16 +499,21 @@ namespace YJ_AutoUnClamp
                             // 시작 신호가 들어오면 검사 Loop 반복
                             if(IsInspectionStart == true)
                             {
-                                if (UnitLastPositionSet == true)
+                                // Safety 먼저 체크
+                                if (!Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_LEFT_DOOR]
+                                || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_RIGHT_DOOR]
+                                || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_LEFT_DOOR])
                                 {
-                                    Unit_Model[0].StartReady();
+                                    Global.instance.SafetyErrorMessage = "DOOR IS OPEN ! ";
+
+                                    IsSafetyInterLock = true;
                                 }
                                 else
                                 {
                                     for (int i = 0; i < (int)MotionUnit_List.Max; i++)
                                     {
                                         if (i == (int)MotionUnit_List.Top_X
-                                            || i == (int)MotionUnit_List.Out_Y
+                                            || i == (int)MotionUnit_List.In_Y
                                             || i == (int)MotionUnit_List.Lift_1
                                             || i == (int)MotionUnit_List.In_CV
                                             || i == (int)MotionUnit_List.Out_CV)
@@ -487,12 +521,22 @@ namespace YJ_AutoUnClamp
                                             Unit_Model[i].Loop();
                                         Thread.Sleep(5);
                                     }
+                                   Global.instance.UnLoadingTactTimeEnd();
+                                }
+                                if (Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OP_BOX_STOP])
+                                {
+                                    Global.instance.InspectionStop();
                                 }
                             }
+                            // 검사 시작 신호가 들어오지 않으면 스위치 체크
                             else
                             {
-                                if (UnitLastPositionSet == false)
-                                    UnitLastPositionSet = true;
+                                if (Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OP_BOX_START])
+                                {
+                                    _ = Global.instance.InspectionStart();
+                                }
+                                Unit_Model[(int)MotionUnit_List.In_CV].UnlodingCvLogic();
+                                Thread.Sleep(5);
                             }
                         }
                     }
@@ -503,7 +547,8 @@ namespace YJ_AutoUnClamp
                 }
             }
         }
-
+        private DateTime? _StartPressedTime = null;
+        private DateTime? _StopPressedTime = null;
 
         #region // override
         protected override void DisposeManaged()

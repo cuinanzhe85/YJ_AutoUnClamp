@@ -1,7 +1,9 @@
 ﻿using Common.Mvvm;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using YJ_AutoUnClamp.Utils.EzMotion_E;
@@ -22,13 +24,13 @@ namespace YJ_AutoUnClamp.Models
             (10000 / (41.38 * Math.PI)*3),    // Out_Handler_Y
             (10000 / (31.83 * Math.PI)*3),    // Out_Handler_Z
             (10000 / (41.38 * Math.PI)*3),    // Top_Handler_X
-            (10000 / (39.79 * Math.PI)*3),    // Top Return In CV
             (10000 / 10 * 3),    // Lift_Z_1
             (10000 / 10 * 3),    // Lift_Z_2
             (10000 / 10 * 3)     // Lift_Z_3
         };
 
         public IPAddress IpAddress ;
+
         public EzMotion_Model_E() { }
         public bool Connect(int iSlaveNo)
         {
@@ -41,13 +43,12 @@ namespace YJ_AutoUnClamp.Models
                     return true;
                 }
 
-                if (iSlaveNo == (int)ServoSlave_List.Out_Y_Handler_Y)   IpAddress = IPAddress.Parse("192.168.0.2");
-                if (iSlaveNo == (int)ServoSlave_List.Out_Z_Handler_Z)   IpAddress = IPAddress.Parse("192.168.0.3");
+                if (iSlaveNo == (int)ServoSlave_List.In_Y_Handler_Y)   IpAddress = IPAddress.Parse("192.168.0.2");
+                if (iSlaveNo == (int)ServoSlave_List.In_Z_Handler_Z)   IpAddress = IPAddress.Parse("192.168.0.3");
                 if (iSlaveNo == (int)ServoSlave_List.Top_X_Handler_X)     IpAddress = IPAddress.Parse("192.168.0.4");
-                if (iSlaveNo == (int)ServoSlave_List.Top_CV_X) IpAddress = IPAddress.Parse("192.168.0.5");
-                if (iSlaveNo == (int)ServoSlave_List.Lift_1_Z) IpAddress = IPAddress.Parse("192.168.0.6");
-                if (iSlaveNo == (int)ServoSlave_List.Lift_2_Z) IpAddress = IPAddress.Parse("192.168.0.7");
-                if (iSlaveNo == (int)ServoSlave_List.Lift_3_Z) IpAddress = IPAddress.Parse("192.168.0.8");
+                if (iSlaveNo == (int)ServoSlave_List.Lift_1_Z) IpAddress = IPAddress.Parse("192.168.0.5");
+                if (iSlaveNo == (int)ServoSlave_List.Lift_2_Z) IpAddress = IPAddress.Parse("192.168.0.6");
+                if (iSlaveNo == (int)ServoSlave_List.Lift_3_Z) IpAddress = IPAddress.Parse("192.168.0.7");
                 // Is not 0 == Connect Success
                 if (EziMOTIONPlusELib.FAS_ConnectTCP(IpAddress, iSlaveNo) == true)
                 {
@@ -358,12 +359,20 @@ namespace YJ_AutoUnClamp.Models
             //        return false; 
             //    }
             //}
+            // Alarm Reset
+            //if (ServoAlarmReset(iSlaveNo) == false)
+            //{
+            //    EmergencyServoStop(iSlaveNo);
+            //    return false;
+            //}
+            await Task.Delay(200);
             // Servo Off
             if (SetAmpEnable(iSlaveNo, false) == false)
             {
                 EmergencyServoStop(iSlaveNo);
                 return false;
             }
+            await Task.Delay(1000);
             // Alarm Reset
             if (ServoAlarmReset(iSlaveNo) == false)
             {
@@ -393,9 +402,9 @@ namespace YJ_AutoUnClamp.Models
             await Task.Delay(200);
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            int waitTime = 20000;
-            if (iSlaveNo == (int)ServoSlave_List.Out_Y_Handler_Y)
-                waitTime = 50000;
+            int waitTime = 90000;
+            if (iSlaveNo == (int)ServoSlave_List.In_Y_Handler_Y)
+                waitTime = 90000;
             while (true)
             {
                 if (IsOriginOK(iSlaveNo) == true)
@@ -412,32 +421,48 @@ namespace YJ_AutoUnClamp.Models
                 await Task.Delay(10);
             }
             // Z up
-            if (iSlaveNo == (int)ServoSlave_List.Out_Z_Handler_Z)
+            if (iSlaveNo == (int)ServoSlave_List.In_Z_Handler_Z)
             {
                 if (IsOriginOK(iSlaveNo) == true)
                 {
-                    double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Z_Handler_Home).ToString()];
+                    double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Ready).ToString()];
                     pos = Math.Round(pos, 2);
                     MoveABS(iSlaveNo, pos);
                     while(true)
                     {
-                        double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Z_Handler_Z)), 2);
+                        double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.In_Z_Handler_Z)), 2);
                         if (GetPos == pos)
                             break ;
                         Thread.Sleep(10);
                     }
                 }
             }
-            if (iSlaveNo == (int)ServoSlave_List.Top_X_Handler_X)
+            else if (iSlaveNo == (int)ServoSlave_List.Top_X_Handler_X)
             {
                 if (IsOriginOK(iSlaveNo) == true)
                 {
-                    double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_Pick_Up).ToString()];
+                    double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_L).ToString()];
                     pos = Math.Round(pos, 2);
                     MoveABS(iSlaveNo, pos);
                     while (true)
                     {
                         double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
+                        if (GetPos == pos)
+                            break;
+                        Thread.Sleep(10);
+                    }
+                }
+            }
+            else if(iSlaveNo == (int)ServoSlave_List.In_Y_Handler_Y)
+            {
+                if (IsOriginOK(iSlaveNo) == true)
+                {
+                    double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_Ready).ToString()];
+                    pos = Math.Round(pos, 2);
+                    MoveABS(iSlaveNo, pos);
+                    while (true)
+                    {
+                        double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.In_Y_Handler_Y)), 2);
                         if (GetPos == pos)
                             break;
                         Thread.Sleep(10);
@@ -479,6 +504,294 @@ namespace YJ_AutoUnClamp.Models
             minusOver = flag2;  //true이면 over이다.
 
             return EziMOTIONPlusRLib.FMM_OK;
+        }
+        public bool MoveTopReadyPosX()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_L).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("TOP_X_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
+        }
+        public bool IsMoveTopReadyDoneX()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_L).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MoveTopPickUpRightPosX()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_R).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("TOP_X_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
+        }
+        public bool IsMoveTopPickUpRightDoneX()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_R).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MoveTopPutDownPosX()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Put_Down).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("TOP_X_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
+        }
+        public bool IsMoveTopPutDownDoneX()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Put_Down).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MoveMoveLiftLowPos(int Index)
+        {
+            double pos = 0;
+            if (Index==0)
+                 pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_1).ToString()];
+            if (Index == 1)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_2).ToString()];
+            if (Index == 2)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_3).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("LIFT_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.Lift_1_Z + Index), pos);
+        }
+        public bool IsMoveLiftLowDone(int Index)
+        {
+            double pos = 0;
+            if (Index == 0)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_1).ToString()];
+            if (Index == 1)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_2).ToString()];
+            if (Index == 2)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_3).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.Lift_1_Z + Index)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MoveMoveLiftUnloadingPos(int Index)
+        {
+            double pos = 0;
+            if (Index == 0)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Unload_1).ToString()];
+            if (Index == 1)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Unload_2).ToString()];
+            if (Index == 2)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Unload_3).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("LIFT_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.Lift_1_Z + Index), pos);
+        }
+        public bool IsMoveLiftUnloadingDone(int Index)
+        {
+            double pos = 0;
+            if (Index == 0)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Unload_1).ToString()];
+            if (Index == 1)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Unload_2).ToString()];
+            if (Index == 2)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Unload_3).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.Lift_1_Z + Index)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MoveMoveLiftInputPos(int Index)
+        {
+            double pos = 0;
+            if (Index == 0)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_1).ToString()];
+            if (Index == 1)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_2).ToString()];
+            if (Index == 2)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_3).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("LIFT_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.Lift_1_Z + Index), pos);
+        }
+        public bool IsMoveLiftInputDone(int Index)
+        {
+            double pos = 0;
+            if (Index == 0)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_1).ToString()];
+            if (Index == 1)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_2).ToString()];
+            if (Index == 2)
+                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_3).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.Lift_1_Z + Index)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool IsUnloadSafetyPosY()
+        {
+            double Pickuppos1 = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_1).ToString()];
+            // 소수점아래 2자리까지비교
+            Pickuppos1 = Math.Round(Pickuppos1, 2);
+            double Pickuppos2 = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_2).ToString()];
+            // 소수점아래 2자리까지비교
+            Pickuppos2 = Math.Round(Pickuppos2, 2);
+            double Pickuppos3 = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_3).ToString()];
+            // 소수점아래 2자리까지비교
+            Pickuppos3 = Math.Round(Pickuppos3, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Y_Handler_Y)), 2);
+            if (GetPos == Pickuppos1 || GetPos == Pickuppos2 || GetPos == Pickuppos3)
+                return true;
+            return false;
+        }
+        public bool MoveReadyPosZ()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Ready).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("Z_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.In_Z_Handler_Z), pos);
+        }
+        public bool IsMoveReadyPosZ()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Ready).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Z_Handler_Z)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MoveReadyPosY()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_Ready).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("Y_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.In_Y_Handler_Y), pos);
+        }
+        public bool IsMoveReadyPosY()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_Ready).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Y_Handler_Y)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MovePutDownPosY()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PutDown).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("Y_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.In_Y_Handler_Y), pos);
+        }
+        public bool IsMovePutDownPosY()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PutDown).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Y_Handler_Y)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MovePickUpPosY(int index)
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_1 + index).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("Y_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.In_Y_Handler_Y), pos);
+        }
+        public bool IsMovePickUpPosY(int index)
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_1 + index).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Y_Handler_Y)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MovePutDownPosZ()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_PutDown).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("Z_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.In_Z_Handler_Z), pos);
+        }
+        public bool IsMovePutDownPosZ()
+        {
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_PutDown).ToString()];
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Z_Handler_Z)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        public bool MovePickUpPosZ()
+        {
+            double pos = GetPickUpFloorPos();
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            Global.instance.Write_Sequence_Log("Z_SERVO_POS", pos.ToString());
+            return MoveABS((int)(ServoSlave_List.In_Z_Handler_Z), pos);
+        }
+        public bool IsMovePickUpPosZ()
+        {
+            double pos = GetPickUpFloorPos();
+            // 소수점아래 2자리까지비교
+            pos = Math.Round(pos, 2);
+            double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Z_Handler_Z)), 2);
+            if (GetPos == pos)
+                return true;
+            return false;
+        }
+        private double GetPickUpFloorPos()
+        {
+            double pos=0;
+            
+            //for (int i = 0; i<(int)Floor_Index.Max; i++)
+            //{
+            //    if (SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] == i)
+            //    {
+            //        int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] - 1;
+            //        pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Unload_1 + floor).ToString()];
+            //        // 소수점아래 2자리까지비교
+            //        pos = Math.Round(pos, 2);
+            //        return pos;
+            //    }
+            //}
+            int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] - 1;
+            pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Unload_1 + floor).ToString()];
+            pos = Math.Round(pos, 2);
+            return pos;
         }
         #region  //DIO Control
         public bool GetIO_InputData(int iSlaveNo, int target)

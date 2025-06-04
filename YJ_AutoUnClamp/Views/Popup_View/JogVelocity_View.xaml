@@ -10,8 +10,8 @@
         xmlns:utils="clr-namespace:YJ_AutoUnClamp.Utils"
         utils:WindowBlur.IsEnabled="True"
         ResizeMode="NoResize" WindowStyle="None"
-        Background="Transparent" AllowsTransparency="True" WindowStartupLocation="CenterScreen"
-        Name="JogVelocity" Width="1000" Height="780">
+        Background="Transparent" AllowsTransparency="True" WindowStartupLocation="CenterScreen" Top="8" Left="12"
+        Name="JogVelocity" Width="1000" Height="750">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="0.05*"/>
@@ -52,6 +52,7 @@
                   CanUserAddRows="False" 
                   ColumnHeaderHeight="80"
                   FontSize="20"
+                  FontWeight="Bold"
                   GridLinesVisibility="Horizontal"
                   HeadersVisibility="Column" Focusable="False" SelectionUnit="Cell"
                   RowHeight="73.8" telerik:CornerRadiusHelper.ClipRadius="8">

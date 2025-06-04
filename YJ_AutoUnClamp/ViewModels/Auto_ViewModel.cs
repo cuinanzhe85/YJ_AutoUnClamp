@@ -1,8 +1,8 @@
 ﻿using Common.Commands;
+using Common.Mvvm;
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using Telerik.Windows.Data;
@@ -55,6 +55,11 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _IsStopEnable; }
             set { SetValue(ref _IsStopEnable, value); }
         }
+        private ObservableCollection<Lift_Model> _LiftData = SingletonManager.instance.Display_Lift;
+        public ObservableCollection<Lift_Model> LiftData
+        {
+            get { return _LiftData; }
+        }
         #endregion
         public Auto_ViewModel()
         {
@@ -76,46 +81,13 @@ namespace YJ_AutoUnClamp.ViewModels
             }
             else if(cmd == "Start")
             {
-                IsStartEnable = false;
-                IsStopEnable = true;
-
-                SingletonManager.instance.IsInspectionStart = true;
+                if (SingletonManager.instance.IsInspectionStart == false)
+                    await Global.instance.InspectionStart();
             }
             else if(cmd == "Stop")
             {
-                IsStartEnable = true;
-                IsStopEnable = false;
-
-                SingletonManager.instance.IsInspectionStart = false;
-
-                SingletonManager.instance.Ez_Model.ServoStop((int)ServoSlave_List.Out_Y_Handler_Y);
-                SingletonManager.instance.Ez_Model.ServoStop((int)ServoSlave_List.Out_Z_Handler_Z);
-                SingletonManager.instance.Ez_Model.ServoStop((int)ServoSlave_List.Top_X_Handler_X);
-
-                /*프로그램 종료 전 동작 유지*/
-                //// In_Handler, Out_Handler 실린더 Up
-                //SingletonManager.instance.Ez_Dio.Set_HandlerUpDown(true);
-
-                //await Task.Delay(50);
-                //SingletonManager.instance.Ez_Model.MoveABS((int)ServoSlave_List.Out_Handler_2_Z, SingletonManager.instance.Teaching_Data[Teaching_List.Out_Handler_Z_Home.ToString()]);
-                //await Task.Delay(3000);
-
-                //// Jig Move 0
-                //for (int i = 5; i<(int)ServoSlave_List.Max; i++)
-                //{
-                //    SingletonManager.instance.Ez_Model.MoveABS(i, 0);
-                //}
-                for (int i = 0; i < 4; i++)
-                {
-                    SingletonManager.instance.Channel_Model[i].IsOutWait = false;
-                    SingletonManager.instance.Channel_Model[i].Status = ChannelStatus.EMPTY;
-                }
-                //for (int i = 0; i<(int)MotionUnit_List.Max; i++)
-                //{
-                //    SingletonManager.instance.Unit_Model[i].In_Cv_Step = Unit_Model.InCvSequence.Idle;
-                //    SingletonManager.instance.Unit_Model[i].Out_Handler_Step = Unit_Model.Out_Handler_Sequence.Idle;
-                //    SingletonManager.instance.Unit_Model[i].Jig_Step = Unit_Model.Jig_Sequence.Idle;
-                //}
+                if (SingletonManager.instance.IsInspectionStart == true)
+                    Global.instance.InspectionStop();
             }
             else
             {
@@ -154,6 +126,7 @@ namespace YJ_AutoUnClamp.ViewModels
                 SingletonManager.instance.Channel_Model[0].StopTactTime();
             }
         }
+
         #region override
         protected override void InitializeCommands()
         {
@@ -177,5 +150,28 @@ namespace YJ_AutoUnClamp.ViewModels
             base.DisposeManaged();
         }
         #endregion
+    }
+    public class Lift_Model : BindableAndDisposable
+    {
+        private string _LiftName;
+        public string LiftName
+        {
+            get { return _LiftName; }
+            set { SetValue(ref _LiftName, value); }
+        }
+        private ObservableCollection<bool> _Floor;
+        public ObservableCollection<bool> Floor
+        {
+            get { return _Floor; }
+            set { SetValue(ref _Floor, value); }
+        }
+        public Lift_Model(string lift)
+        {
+            Floor = new ObservableCollection<bool>();
+            for (int i = 0; i < 7; i++)
+                Floor.Add(false);
+
+            this.LiftName = lift;
+        }
     }
 }

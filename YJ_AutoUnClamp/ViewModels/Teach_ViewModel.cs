@@ -18,34 +18,32 @@ namespace YJ_AutoUnClamp.ViewModels
 {
     public enum Teaching_List
     {
-        Top_X_Handler_Home,
-        Top_X_Handler_Pick_Up,
-        Top_X_Handler_Put_Down,
-        Top_X_Handler_NG_Port,
-        Out_Y_Handler_Home,
-        Out_Y_Handler_Pick_Up,
-        Out_Y_Handler_Put_Down_1,
-        Out_Y_Handler_Put_Down_2,
-        Out_Y_Handler_Put_Down_3,
-        Out_Z_Handler_Home,
-        Out_Z_Handler_Pick_Up,
-        Out_Z_Handler_Put_Down_1,
-        Out_Z_Handler_Put_Down_2,
-        Out_Z_Handler_Put_Down_3,
-        Out_Z_Handler_Put_Down_4,
-        Out_Z_Handler_Put_Down_5,
-        Out_Z_Handler_Put_Down_6,
-        Out_Z_Handler_Put_Down_7,
-        Lift_Home_1,
-        Lift_Upper_1,
-        Lift_Low_1,
-        Lift_Home_2,
-        Lift_Upper_2,
-        Lift_Low_2,
-        Lift_Home_3,
-        Lift_Upper_3,
-        Lift_Low_3,
-
+        In_Y_Ready,         //0
+        In_Y_PutDown,       //1       
+        In_Y_PickUp_1,      //2
+        In_Y_PickUp_2,      //3
+        In_Y_PickUp_3,      //4
+        In_Z_Ready,         //5
+        In_Z_PutDown,       //6
+        In_Z_Unload_1,      //7
+        In_Z_Unload_2,      //8
+        In_Z_Unload_3,      //9
+        In_Z_Unload_4,      //10
+        In_Z_Unload_5,      //11
+        In_Z_Unload_6,      //12
+        In_Z_Unload_7,      //13
+        Top_X_Put_Down,     //14
+        Top_X_PickUp_L,      //15
+        Top_X_PickUp_R,      //16
+        Lift_Unload_1,       //17
+        Lift_Upper_1,       //18
+        Lift_Low_1,         //19
+        Lift_Unload_2,       //22
+        Lift_Upper_2,       //20
+        Lift_Low_2,         //21
+        Lift_Unload_3,       //25
+        Lift_Upper_3,       //23
+        Lift_Low_3,         //24
         Max
     }
     // Initial -> Flow 초기화 홈포지션
@@ -82,9 +80,9 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         enum TeachingSection
         {
-            Top_Handler_X,
-            Out_Handler_Y,
-            Out_Handler_Z,
+            In_Y,
+            In_Z,
+            Top_X,
             Lift,
             Max
         }
@@ -274,18 +272,20 @@ namespace YJ_AutoUnClamp.ViewModels
             {
                 case "Top":
                     Selected_UnitIndex = (int)MotionUnit_List.Top_X;
-                    TeachPosition[(int)TeachingSection.Top_Handler_X] = position;
+                    TeachPosition[(int)TeachingSection.Top_X] = position;
                     break;
-                case "Out":
-                    if (key.ToString().IndexOf("Out_Y_Handler", StringComparison.Ordinal) != 0)
+                case "In":
+                    // Y
+                    if (key.ToString().IndexOf("In_Y", StringComparison.Ordinal) != 0)
                     {
-                        Selected_UnitIndex = (int)MotionUnit_List.Out_Z;
-                        TeachPosition[(int)TeachingSection.Out_Handler_Z] = position;
+                        Selected_UnitIndex = (int)MotionUnit_List.In_Z;
+                        TeachPosition[(int)TeachingSection.In_Z] = position;
                     }
+                    // Z
                     else
                     {
-                        Selected_UnitIndex = (int)MotionUnit_List.Out_Y;
-                        TeachPosition[(int)TeachingSection.Out_Handler_Y] = position;
+                        Selected_UnitIndex = (int)MotionUnit_List.In_Y;
+                        TeachPosition[(int)TeachingSection.In_Y] = position;
                     }
                     break;
                 case "Lift":
@@ -303,7 +303,7 @@ namespace YJ_AutoUnClamp.ViewModels
 
             try
             {
-                Dio.Set_HandlerUpDown(true); await Task.Delay(1000);
+                Dio.Set_HandlerInit(); await Task.Delay(1000);
                 // 실패한 모터를 추적하기 위한 리스트
                 var failedMotors = new List<string>();
 
@@ -313,8 +313,7 @@ namespace YJ_AutoUnClamp.ViewModels
                 {
                     
                     var motor = (ServoSlave_List)i; // 모터 이름 가져오기
-                    if (i != (int)ServoSlave_List.Top_CV_X)
-                        tasks.Add(Task.Run(async () => (motor, await EzModel.SetHomePositionWithTimeout(i))));
+                    tasks.Add(Task.Run(async () => (motor, await EzModel.SetHomePositionWithTimeout(i))));
                     
                 }
                 // 모든 작업 완료 대기
@@ -333,17 +332,11 @@ namespace YJ_AutoUnClamp.ViewModels
                 if (failedMotors.Count > 0)
                 {
                     string failedMotorsMessage = string.Join(", ", failedMotors);
-                    MessageBox.Show($"The following motors failed to move to the home position: {failedMotorsMessage}",
-                                    "Home Position Error",
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Error);
+                    Global.instance.ShowMessagebox($"The following motors failed to move to the home position: {failedMotorsMessage}");
                 }
                 else
                 {
-                    MessageBox.Show("All motors successfully moved to the home position.",
-                                    "Home Position Success",
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Information);
+                    Global.instance.ShowMessagebox("All motors successfully moved to the home position.");
                 }
             }
             finally
@@ -355,7 +348,7 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         private void MoveAllStop()
         {
-            for (int i = 1; i < (int)ServoSlave_List.Max; i++)
+            for (int i = 0; i < (int)ServoSlave_List.Max; i++)
             {
                 if (ServoModel[i].IsServoOn == true)
                     EzModel.ServoStop(i);
@@ -363,7 +356,7 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         private void AlarmAllReset()
         {
-            for (int i = 1; i < (int)ServoSlave_List.Max; i++)
+            for (int i = 0; i < (int)ServoSlave_List.Max; i++)
             {
                 EzModel.ServoAlarmReset(i);
             }
@@ -441,10 +434,10 @@ namespace YJ_AutoUnClamp.ViewModels
                     EzModel.MoveABS(Selected_ServoIndex[(int)ServoTarget.Z], Target_Position[(int)ServoTarget.Z]);
                     break;
                 case "Jog_X_CW":
-                    MoveJog(JogType.X_CCW);
+                    MoveJog(JogType.X_CW);
                     break;
                 case "Jog_X_CCW":
-                    MoveJog(JogType.X_CW);
+                    MoveJog(JogType.X_CCW);
                     break;
                 case "Jog_Y_CW":
                     MoveJog(JogType.Y_CCW);
@@ -520,7 +513,7 @@ namespace YJ_AutoUnClamp.ViewModels
             {
                 return;
             }
-            string teachFilePath = Path.Combine(Global.instance.IniTeachPath, SingletonManager.instance.Current_Model.TeachFileName);
+            string teachFilePath = Path.Combine(Global.instance.IniTeachPath);
             var iniFile = new IniFile(teachFilePath);
             string section = obj.ToString();
             if (section == "Lift")
@@ -529,46 +522,47 @@ namespace YJ_AutoUnClamp.ViewModels
                 TeachPosition[(int)TeachingSection.Lift] = Current_Position[(int)ServoTarget.Z];
                 SingletonManager.instance.Teaching_Data[((Teaching_List)TeachingIndex + (Selected_LiftIndex * 3)).ToString()] = Current_Position[(int)ServoTarget.Z];
             }
-            else if (section == "Top_X_Handler")
+            else if (section == "Top_X")
             {
                 iniFile.Write($"{((Teaching_List)TeachingIndex).ToString()}", Current_Position[(int)ServoTarget.X], section);
-                TeachPosition[(int)TeachingSection.Top_Handler_X] = Current_Position[(int)ServoTarget.X];
+                TeachPosition[(int)TeachingSection.Top_X] = Current_Position[(int)ServoTarget.X];
                 SingletonManager.instance.Teaching_Data[((Teaching_List)TeachingIndex).ToString()] = Current_Position[(int)ServoTarget.X];
             }
-            else if (section == "Out_Y_Handler")
+            else if (section == "In_Y")
             {
                 iniFile.Write($"{((Teaching_List)TeachingIndex).ToString()}", Current_Position[(int)ServoTarget.Y], section);
-                TeachPosition[(int)TeachingSection.Out_Handler_Y] = Current_Position[(int)ServoTarget.Y];
+                TeachPosition[(int)TeachingSection.In_Y] = Current_Position[(int)ServoTarget.Y];
                 SingletonManager.instance.Teaching_Data[((Teaching_List)TeachingIndex).ToString()] = Current_Position[(int)ServoTarget.Y];
             }
-            else if (section == "Out_Z_Handler")
+            else if (section == "In_Z")
             {
                 iniFile.Write($"{((Teaching_List)TeachingIndex).ToString()}", Current_Position[(int)ServoTarget.Z], section);
-                TeachPosition[(int)TeachingSection.Out_Handler_Z] = Current_Position[(int)ServoTarget.Z];
+                TeachPosition[(int)TeachingSection.In_Z] = Current_Position[(int)ServoTarget.Z];
                 SingletonManager.instance.Teaching_Data[((Teaching_List)TeachingIndex).ToString()] = Current_Position[(int)ServoTarget.Z];
             }
-            if(section == "Lift")
-                MessageBox.Show($"[ {((Teaching_List)TeachingIndex + (Selected_LiftIndex * 3)).ToString()} ] Save Complete.", "Save Successful", MessageBoxButton.OK, MessageBoxImage.Information);
-            else if(section == "OutZ_Handler")
-            {
-                MessageBox.Show($"[ {((Teaching_List)TeachingIndex ).ToString()} ] Save Complete.", "Save Successful", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-                MessageBox.Show($"[ {((Teaching_List)TeachingIndex).ToString()} ] Save Complete.", "Save Successful", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         private void OnTeachingMove_Command(object obj)
         {
+            if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+            {
+                return;
+            }
             string cmd = obj.ToString();
             switch (cmd)
             {
-                case "Top_X_Handler":
-                    EzModel.MoveABS((int)ServoSlave_List.Top_X_Handler_X, TeachPosition[(int)TeachingSection.Top_Handler_X]);
+                case "Top_X":
+                    EzModel.MoveABS((int)ServoSlave_List.Top_X_Handler_X, TeachPosition[(int)TeachingSection.Top_X]);
                     break;
-                case "Out_Y_Handler":
-                    EzModel.MoveABS((int)ServoSlave_List.Out_Y_Handler_Y, TeachPosition[(int)TeachingSection.Out_Handler_Y]);
+                case "In_Y":
+                    if (EzModel.IsMoveReadyPosZ() == false)
+                    {
+                        MessageBox.Show("Z is not ready position.", "Servo Move", MessageBoxButton.OK);
+                        return;
+                    }
+                    EzModel.MoveABS((int)ServoSlave_List.In_Y_Handler_Y, TeachPosition[(int)TeachingSection.In_Y]);
                     break;
-                case "Out_Z_Handler":
-                    EzModel.MoveABS((int)ServoSlave_List.Out_Z_Handler_Z, TeachPosition[(int)TeachingSection.Out_Handler_Z]);
+                case "In_Z":
+                    EzModel.MoveABS((int)ServoSlave_List.In_Z_Handler_Z, TeachPosition[(int)TeachingSection.In_Z]);
                     break;
                 case "Lift":
                     EzModel.MoveABS((int)ServoSlave_List.Lift_1_Z + Selected_LiftIndex, TeachPosition[(int)TeachingSection.Lift]);
@@ -582,18 +576,102 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             if (string.IsNullOrEmpty(obj.ToString()))
                 return;
-            if (obj.ToString() == "TopRetCV")
+            switch(obj.ToString())
             {
-                if (TopCVRunStop == true)
-                    EzModel.MoveJog((int)ServoSlave_List.Top_CV_X, (int)Direction.CCW, 2);
-                else
-                    EzModel.ServoStop((int)ServoSlave_List.Top_CV_X);
+                case "UnloadGripY":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNLOAD_LD_Z_GRIP] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNLOAD_LD_Z_GRIP, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNLOAD_LD_Z_GRIP, false);
+                    break;
+                case "UnloadGripX":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNLOAD_Z_GRIP] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNLOAD_Z_GRIP, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNLOAD_Z_GRIP, false);
+                    break;
+                case "UnloadUpDownX":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNLOAD_Z_DOWN] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNLOAD_Z_DOWN, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNLOAD_Z_DOWN, false);
+                    break;
+                case "L_UpDown":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_DOWN] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_DOWN, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_DOWN, false);
+                    break;
+                case "L_Grip1":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_GRIP] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_GRIP, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_GRIP, false);
+                    break;
+                case "L_Grip2":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_GRIP_F_FINGER] == false
+                        || Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.OUT_PP_LEFT_Z_GRIP_R_FINGER] == false)
+                    {
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_GRIP_F_FINGER, true);
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OUT_PP_LEFT_Z_GRIP_R_FINGER, true);
+                    }
+                    else
+                    {
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_LEFT_Z_GRIP_F_FINGER, false);
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OUT_PP_LEFT_Z_GRIP_R_FINGER, false);
+                    }
+                    break;
+                case "R_UpDown":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNCLAMP_RIGHT_Z_DOWN] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_RIGHT_Z_DOWN, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_RIGHT_Z_DOWN, false);
+                    break;
+                case "Center":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNCLAMP_CV_CENTERING] == true)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_CV_CENTERING, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_CV_CENTERING, false);
+                    break;
+                case "TopUpDown":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.TOP_RETURN_Z_DOWN] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_Z_DOWN, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_Z_DOWN, false);
+                    break;
+                case "TopGrip":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.TOP_RETURN_Z_GRIP] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_Z_GRIP, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_Z_GRIP, false);
+                    break;
+                case "TopLR":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.TOP_RETURN_X_FWD] == true)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_X_FWD, false);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_X_FWD, true);
+                    break;
+                case "BTM_UpDown":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_DOWN] == true)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_DOWN, false);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_DOWN, true);
+                    break;
+                case "BTM_Grip":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_GRIP] == false)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_GRIP, true);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_GRIP, false);
+                    break;
+                case "BTM_LR":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.BOTTOM_RETURN_X_FWD] == true)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_X_FWD, false);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_X_FWD, true);
+                    break;
             }
-            else
-            {
-                int index = int.Parse(obj.ToString());
-                Dio.SetIO_OutputData(index, Dio.DO_OPER_DATA[index]);
-            }
+            //int index = int.Parse(obj.ToString());
+            //Dio.SetIO_OutputData(index, Dio.DO_OPER_DATA[index]);
         }
         #region // override
         protected override void InitializeCommands()

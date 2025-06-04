@@ -39,7 +39,7 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             PopupFactories = new Dictionary<DataMenu_PopupList, Func<(Window, Child_ViewModel)>>
             {
-                { DataMenu_PopupList.System, () => (new EquipmentMode_View(), new EquipmentMode_ViewModel()) },
+                { DataMenu_PopupList.System, () => (new SystemOperation_View(), new SystemData_ViewModel()) },
                 //{ DataMenu_PopupList.Model, () => (new ModelData_View(), new ModelData_ViewModel()) },
                 { DataMenu_PopupList.Serial, () => (new TcpSerial_View(), new TcpSerial_ViewModel()) },
                 { DataMenu_PopupList.Jog, () => (new JogVelocity_View(), new JogVelocity_ViewModel()) },

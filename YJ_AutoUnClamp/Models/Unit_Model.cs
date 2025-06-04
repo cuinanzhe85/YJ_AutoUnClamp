@@ -1,14 +1,10 @@
 ﻿using Common.Managers;
-using HelixToolkit.Wpf;
-using Lmi3d.Zen;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Telerik.Windows.Data;
-using YJ_AutoUnClamp.ViewModels;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using static YJ_AutoUnClamp.Models.EziDio_Model;
 
 namespace YJ_AutoUnClamp.Models
@@ -20,10 +16,9 @@ namespace YJ_AutoUnClamp.Models
     }
     public enum MotionUnit_List
     {
-        Out_Y,
-        Out_Z,
+        In_Y,
+        In_Z,
         Top_X,
-        Top_CV,
         Lift_1,
         Lift_2,
         Lift_3,
@@ -33,10 +28,9 @@ namespace YJ_AutoUnClamp.Models
     }
     public enum ServoSlave_List
     {
-        Out_Y_Handler_Y,
-        Out_Z_Handler_Z,
+        In_Y_Handler_Y,
+        In_Z_Handler_Z,
         Top_X_Handler_X,
-        Top_CV_X,
         Lift_1_Z,
         Lift_2_Z,
         Lift_3_Z,
@@ -60,20 +54,12 @@ namespace YJ_AutoUnClamp.Models
         Floor_7,
         Max
     }
+    
     public class Unit_Model
     {
         public MotionUnit_List UnitGroup { get; set; }
         public int UnitID { get; set; }
         public List<ServoSlave_List> ServoNames { get; set; }
-
-        // Top Clamp 안착작업 완료시 사용되는 변수
-        private bool TopClampingDone = false;
-        // Bottom NG 배출용 변수
-        private bool[] TopReturnDone = { false, false,};
-        private bool[] AgingCvFull = { false, false, false, false, false, false };
-        private bool[] AgingCvStart = { false, false, false, false, false, false };
-        private bool[] AgingCvEndStopCondition = { false, false, false, false, false, false };
-        private bool[] AgingCvInStopCondition = { false, false, false, false, false, false };
         public Unit_Model(MotionUnit_List unit)
         {
             UnitGroup = unit;
@@ -83,177 +69,148 @@ namespace YJ_AutoUnClamp.Models
         private RadObservableCollection<Channel_Model> Channel_Model = SingletonManager.instance.Channel_Model;
         private Dictionary<string,double> Teaching_Data = SingletonManager.instance.Teaching_Data;
         private EziDio_Model Dio = SingletonManager.instance.Ez_Dio;
-        private EzMotion_Model_E Ez = SingletonManager.instance.Ez_Model;
+        private EzMotion_Model_E Ez_Model = SingletonManager.instance.Ez_Model;
 
+        private bool _NoneSetTest = true; // Set Test Mode
         private bool _isLoopRunning = false;
+        public bool UnloadYPutDownMoving=false;
+        public bool UnclampBottomReturnDone = false;
+        Stopwatch _TimeDelay = new Stopwatch();
         // Steps
-        public enum InCvSequence
+        public enum UnClampHandStep
         {
             Idle,
-            In_Sensor_Check,
-            CV_Off_Check,
-            Centering_forward_Check,
-            Centering_Backward_Check
+            Rtn_Bottom_Handle_Check,
+            Ready_Move_Done,
+            UnClamping_Wait,
+            Top_Hand_PickUp_Down_Check,
+            Top_Hand_FR_Grip_Check,
+            Top_Hand_Grip_Check,
+            Top_Hand_Up_Check,
+            Set_Hand_PickUp_Move_Check,
+            Set_Hand_Down_Check,
+            Set_Hand_Vacuum_Check,
+            Set_Hand_Up_Check,
+            Move_PutDown_Done_Check,
+            Top_Hand_PutDown,
+            Top_Hand_PutDown_Check,
+            Top_Hand_UnGrip_Check,
+            Top_Hand_PutDown_Up_Check,
+            Set_Hand_PutDown,
+            set_Hand_PutDown_Check,
+            Set_Hand_PutDown_Up_Check,
+            Set_Http_Request_Send,
+            Set_Http_Result_Wait
         }
-        public enum InBottomHandle
+        public enum ReturnBottomStep
         {
             Idle,
-            Out_Position_Tray_Check,
-            TrayInSecsorCheck,
-            Set_PutDown,
-            Set_Handler_Up,
-            Set_PutDown_Done,
-            Bottom_Clmap_Pickup,
-            Bottom_Clamp_Grip,
-            Bottom_Handler_Up,
-            Bottom_PicUp_Done,
-            Set_Handler_Down,
-            Bottom_Handler_Forward,
-            Set_PickUp_Down,
-            Set_Vacuum_On,
-            Set_Centering_Bwd,
-            Set_PickUp_Up,
-            Set_PickUp_Done,
-            Bottom_PutDown_Down,
-            Bottom_UnGrip,
-            Bottom_PutDown_Up,
-            Bottom_Centering_Fwd,
-            Bottom_PutDown_Done,
+            Ready_Move_Check,
+            Right_Move_Done,
+            Bottom_Centering_BWD_Check,
+            Hand_Down_Check,
+            Grip_Check,
+            Hand_Up_Check,
+            Left_Move_Done,
+            Clamp_IF_Return_Wait,
+            PutDown_Down_Check,
+            PutDown_UnGrip_Check,
+            PutDown_Up_Check,
+        }
+        public enum ReturnTopStep
+        {
+            Idle,
+            Top_Clamp_Arrival_Check,
+            Hand_Down_Check,
+            Grip_Check,
+            Hand_Up_Check,
+            Left_Move_Done,
+            Clamp_Return_Wait,
+            PutDown_Down_Check,
+            UnGrip_Check,
+            PutDown_Up_Check,
+            Right_Move_Done
+        }
+        public enum Top_Out_CV
+        {
+            Idle,
+            CV_Run_Condtion_Check,
+            CV_Stop_Wait
+        }
+        public enum Lift_Step
+        {
+            Idle,
+            Clamp_IF_Wait,
+            Lift_Input_Move_Donw,
+            Lift_Down_Done,
+            Lift_CV_Stop,
+            UnloadPosMove,
+            Lift_CV_Stop_Wait,
+            Aging_CV_Stop,
+            Lift_Low_Move_Upper,
+            Lift_Low_Move_Upper_Doe,
+            Clamp_BarCode_Read,
+            Clamp_BarCode_Read_Done,
+            Clamp_InDate_Read,
+            Clamp_InDate_Waite,
+            Aging_Time_Check,
+            Aging_Time_Check_Wait,
+            Lift_UnlodingPosMove,
+            Lift_UnlodingPos_Done
 
-            HandleLeftMoveCheck,
-            PutDownSensorCheck,
-            GripSensorCheck,
-            HandleUpSensorCheck,
-            HandleRightMoveCheck,
-            PanelInputSensorCheck,
-            NgBottomTrayPutDownCheck,
-            NgBottomTrayUnGripCheck,
-            PanelPutdownCheck,
-            VacuumOnGribUnlockCheck,
-            Input_Centering_BWD_Check,
-            HandleUpCheck,
-            Out_CV_On
         }
-        public enum TopHandle
+        public enum UnClamp_CV_Step
         {
             Idle,
-            Top_Handle_Up_Check,
-            Top_Handle_Pickup_Position_Check,
-            Top_Tray_In_Check,
-            Top_Handle_Down_Check,
-            Top_Handle_Grip_Lock_Check,
-            Top_Handle_PutUp_Check,
-            Top_Handle_Tray_Out_Wait,
-            Top_Handle_NG_Port_Move_Check,
-            Top_Handle_NG_Port_Down_check,
-            Top_Handle_NG_Port_UnGrip_check,
-            Top_Handle_NG_Port_Up_check,
-            Buttom_Clamp_Arrival_Check,
-            Top_Handle_PutDown_Move_Check,
-            Top_Handle_Centering_FWD_Check,
-            Top_Handle_PutDown_Check,
-            Top_Handle_Grip_Unlock_Check,
-            Top_Handle_PutDown_Up_Check
-        }
-        public enum OutHandle
-        {
-            Idle,
-            Out_Handle_Z_Up,
-            Out_Handle_Z_Up_Done,
-            Top_Tray_Sensor_Check,
-            Out_Handle_X_Pickup_Pos_Check,
-            Out_Handle_Z_Down_Done,
-            Out_Handle_Grip_Check,
-            Out_Handle_Z_Pickup_Up_Done,
-            Out_Handle_X_PutDown_Pos_Check,
-            Out_Handle_Z_PutDown_Done,
-            Out_Handle_UnGrip_Check,
-            Out_Handle_Z_Ready_Check
-        }
-        public enum OutCvSequence
-        {
-            Idle,
-            Out_CV_On_Wait,
-            Out_CV_Tray_OK_Out,
-            Out_CV_Tray_NG_Out,
-            Out_CV_Tray_NG_Check,
-            Out_CV_Off_Wait,
-            Out_CV_Centering_FWD_Check,
-            Out_CV_Centering_BWD_Check
-        }
-        public enum Aging_CV_Step
-        {
-            Idle,
-            CV_On_Condition_Wait,
-            Low_Lift_Down,
-            Unclamping_IF_Send,
-            Unclamping_IF_Receive,
-            Lift_CV_Forward,
-            Aging_CV_Forward,
+            CV_Run,
             CV_Stop,
-            Unclamping_IF_Set_Off,
-            Low_Lift_Up_Start,
-            Low_Lift_Up_Wait
-            
+            CV_Stop_Wait,
+            Centering_Check
         }
-        public enum Aging_Lift_Step
+        public enum Unload_CV_Step
         {
             Idle,
-            CV_On_Wait,
-            CV_Full_Sensor_Check,
-            Lift_Upper_Step,
-            Upper_Stop_Sensor_Check
+            CV_Run,
+            CV_Stop
         }
-        public enum Rtn_Top_CV_1
+        public enum Unload_X_Step
         {
             Idle,
-            Top_CV_Stop,
-            Top_Unclalmp_IF_Send,
-            Top_Unclamp_IF_Off
+            Left_Move,
+            Left_Check,
+            Left_Down_Check,
+            Left_Grip_Check,
+            Left_Up_Check,
+            Right_Check,
+            Right_Down_Check,
+            Right_UnGrip_Check,
+            Right_Up_Check
         }
-        public enum Rtn_BTM_CV
+        public enum Unload_Y_Step
         {
             Idle,
-            Rtn_BTM_CV_Stop,
-            Rtn_BTM_Unclmap_IF_Send,
-            Rtn_BTM_Unclmap_IF_Off
+            Z_Ready_Check,
+            PickUp_Stage_Check,
+            Move_X_Pickup_Wait,
+            Move_Y_Ready_Done,
+            Move_Y_PickUp_Done,
+            Move_Z_PickUp_Down_Done,
+            Grip_Check,
+            Move_Z_Ready_Done,
+            Move_Y_PutDown_Done,
+            Move_Z_PutDown_Done,
+            UnGrip_Check,
+            Move_Z_PutDown_Up_Done,
         }
-        // 일단 보류
-        public enum Top_NG
-        {
-            Idle,
-            Top_CV_Run,
-            Top_CV_Stop
-        }
-        public enum Ready_Step
-        {
-            Idle,
-            Out_Z_Ready_Move,
-            Out_Z_Ready_Wait,
-            In_Handler_Ready_Move,
-            In_Handler_Ready_Wait,
-            Y_Position_Move,
-            Y_Move_Wait,
-            X_Z_In_Ready_Wait
-
-        }
-        public InCvSequence In_Cv_Step = InCvSequence.Idle;
-        public OutCvSequence Out_Cv_Step = OutCvSequence.Idle;
-        public InBottomHandle In_Grip_Step = InBottomHandle.Idle;
-        public TopHandle Top_Handle_Step = TopHandle.Idle;
-        public OutHandle Out_Handle_Step = OutHandle.Idle;
-        public Aging_CV_Step[] AgingCVStep = { Aging_CV_Step.Idle, 
-                                            Aging_CV_Step.Idle, 
-                                            Aging_CV_Step.Idle,
-                                            Aging_CV_Step.Idle, 
-                                            Aging_CV_Step.Idle, 
-                                            Aging_CV_Step.Idle };
-
-        public Rtn_Top_CV_1 RetTopCV_1_Step = Rtn_Top_CV_1.Idle;
-        public Rtn_BTM_CV RetBtmCV_Step = Rtn_BTM_CV.Idle;
-        public Top_NG TopNgStep = Top_NG.Idle;
-
-        public Ready_Step ReadyStep = Ready_Step.Idle;
+        public UnClampHandStep UnClampStep = UnClampHandStep.Idle;
+        public ReturnBottomStep RtnBtmStep = ReturnBottomStep.Idle;
+        public ReturnTopStep RtnTopStep = ReturnTopStep.Idle;
+        public Top_Out_CV TopOutCVStep = Top_Out_CV.Idle;
+        public Lift_Step LiftStep = Lift_Step.Idle;
+        public UnClamp_CV_Step UnClampCvStep = UnClamp_CV_Step.Idle;
+        public Unload_CV_Step UnloadCvStep = Unload_CV_Step.Idle;
+        public Unload_X_Step UnloadXlStep = Unload_X_Step.Idle;
+        public Unload_Y_Step UnloadYStep = Unload_Y_Step.Idle;
         public void Loop()
         {
             // Task.Delay를 사용하는경우 Loop 동작 확인후 리턴. 중복호출 방지
@@ -263,1547 +220,1360 @@ namespace YJ_AutoUnClamp.Models
             switch (UnitGroup)
             {
                 case MotionUnit_List.Top_X:
-                    Top_Handel_Logic();
-                    Bottom_Handel_Logic();
+                    UnClampXHandlerLogic();
+                    ReturnBottomHandlerLogic();
+                    ReturnTopHandlerLogic();
                     break;
-                case MotionUnit_List.Out_Y:
-                    Out_Handle_Y_Logic();
+                case MotionUnit_List.In_Y:
+                    UnloadYHandlerLogic();
+                    UnloadXLogic();
                     break;
                 case MotionUnit_List.Lift_1:
-                    // Aging C/V 개수만큼 돌린다.
-                    //Aging_CV_Logic(0);
-                    //Aging_CV_Logic(2);
-                    //Aging_CV_Logic(4);
-                    //Aging_CV_Logic(1);
-                    //Aging_CV_Logic(3);
-                    //Aging_CV_Logic(5);
+                    LiftLogic();
                     break;
                 case MotionUnit_List.In_CV:
-                    In_CV_Logic();
-                    Return_Bottom_CV_Logic();
-                    Return_Top_CV_1_Logic();
+                    UnClampCvLogic();
+                    UnlodingCvLogic();
                     break;
                 case MotionUnit_List.Out_CV:
-                    Bottom_Out_CV_Logic();
-                    //Top_NG_CV_Logic();
+                    TopOutCVLogic();
                     break;
             }
         }
-        private void In_CV_Logic()
+        private void UnClampXHandlerLogic()
         {
-            switch (In_Cv_Step)
+            switch(UnClampStep)
             {
-                case InCvSequence.Idle:
-                    In_Cv_Step = InCvSequence.In_Sensor_Check;
-                    break;
-                case InCvSequence.In_Sensor_Check:
-                    // 제품 투입 sensor 와 도착 위치에 제품이 없을때 cv on
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_IN_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_OUT_SS_2] == false)
-                    {
-                        Dio_Output(DO_MAP.INPUT_SET_CV_RUN, true);
-                        In_Cv_Step = InCvSequence.CV_Off_Check;
-                    }
-                    break;
-                case InCvSequence.CV_Off_Check:
-                    // cv out 센서 감지 됬을때 cv off 하고 centering 전진
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_OUT_SS_2] == true)
-                    {
-                        // cv off
-                        Dio_Output(DO_MAP.INPUT_SET_CV_RUN, false);
-                        // centering 전진
-                        Dio_Output(DO_MAP.IN_SET_CV_CENTERING, true);
+                case UnClampHandStep.Idle:
+                    // Up상태가 아니면 Up한다.
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_DOWN_CYL] == true)
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, false);
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_TR_RIGHT_Z_DOWN_CYL] == true)
+                        Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_DOWN, false);
+                    UnClampStep = UnClampHandStep.Rtn_Bottom_Handle_Check;
 
-                        In_Cv_Step = InCvSequence.Centering_forward_Check;
-                    }
+                    Global.Mlog.Info($"UnClampHandStep => Rtn_Bottom_Handle_Check");
                     break;
-                case InCvSequence.Centering_forward_Check:
-                    // 센터링 전진센서 확인 후 후진 sentering 후진
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_UNALIGN_CYL_SS] == true) // IN_CV_UNALIGN_CYL_SS 센서 확인 필요 ????
+                case UnClampHandStep.Rtn_Bottom_Handle_Check:
+                    // Return Bottom Handler 위치가 left 일때 X handler Ready위치로 이동
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_X_LEFT] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_UNGRIP] == true
+                        &&  UnclampBottomReturnDone == false)
                     {
-                        //Dio_Output(DO_MAP.IN_SET_CV_CENTERING, false);
-
-                        //In_Cv_Step = InCvSequence.Centering_Backward_Check;
-                        In_Cv_Step = InCvSequence.Idle; // 센터링 후진은 SET 흡착할후 하는걸로.
+                        Global.Mlog.Info($"UnClampHandStep => Ready_Move_Done");
+                        Global.Mlog.Info($"UnClampHandStep => Move Ready X");
+                        if (Ez_Model.MoveTopReadyPosX()==true)
+                            UnClampStep = UnClampHandStep.Ready_Move_Done;
                     }
                     break;
-            }
-        }
-        private void Bottom_Out_CV_Logic()
-        {
-            switch (Out_Cv_Step)
-            {
-                case OutCvSequence.Idle:
-                    // 배출위치 도착센서가 감지 되지않으면  out cv 스토퍼 up
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_4] != true 
+                case UnClampHandStep.Ready_Move_Done:
+                    // Ready위치 도착 확인
+                    if (Ez_Model.IsMoveTopReadyDoneX()==true)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => Move Ready Done X");
+                        Global.instance.TactTimeStart = false;
+                        UnClampStep = UnClampHandStep.UnClamping_Wait;
+
+                        Global.Mlog.Info($"UnClampHandStep => UnClamping_Wait");
+                    }
+                    break;
+                case UnClampHandStep.UnClamping_Wait:
+                    // Clamp가 진입하면 Top Hand Down (도착 센서 및 Centering 전지 확인)
+                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == true 
+                        && Dio.DO_RAW_DATA[(int)DO_MAP.UNCLAMP_CV_RUN] == false)
                         || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
                     {
-                        // 스토퍼 상승
-                        if (Dio.DO_RAW_DATA[(int)DO_MAP.CLAMPING_CV_STOPER_UP_SOL] == false)
-                            Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, true);
-                        Out_Cv_Step = OutCvSequence.Out_CV_On_Wait;
-                    }
-                    break;
-                case OutCvSequence.Out_CV_On_Wait:
-                    // bottom tray ok/ng 확인 & Pannel 장착 완료 상태 확인 후 cv on
-                    if (SingletonManager.instance.BottomClampDone == true)
-                    {
-                        if ((Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_4] == true         // Bottom clamp 센서
-                                && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_5] == true  // Bottom clamp 센서
-                                && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_6] == true  // Bottom clamp  센서
-                                && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == false // Top clamp  센서
-                                && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_2] == false // Top clamp  센서
-                                && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_3] == false // Top clamp  센서
-                                && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_UP_CYL_SS] == true)    // Set grap handler up
-                                || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)   
-                        {
-                            if (SingletonManager.instance.BottomClampNG == true)
-                            {
-                                // NG 일때
-                                Out_Cv_Step = OutCvSequence.Out_CV_Tray_NG_Out;
-                            }
-                            else
-                            {
-                                // OK 일때
-                                Out_Cv_Step = OutCvSequence.Out_CV_Tray_OK_Out;
-                            }
-                        }
-                    }
-                    break;
-                case OutCvSequence.Out_CV_Tray_OK_Out:
-                    // Clmap 끝단 제품이 있는지 확인 한다.제품 없을때 cv on
-                    SingletonManager.instance.BottomClampDone = false;
-                    // 스토퍼 상승
-                    if (Dio.DO_RAW_DATA[(int)DO_MAP.CLAMPING_CV_STOPER_UP_SOL] == false)
-                        Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, true);
-                    //cv on
-                    Dio_Output(DO_MAP.CLAMPING_CV_RUN, true);
-                    Out_Cv_Step = OutCvSequence.Out_CV_Off_Wait;
-                    break;
-                case OutCvSequence.Out_CV_Tray_NG_Out:
-                    // ng 이면 도착 센서 감지 후 스토퍼 하강
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] != true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_2] != true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.NG_BOTTOM_CV_DETECT_SS_1] != true)
-                    {
-                        // NG 변수 Flag 초기화
-                        SingletonManager.instance.BottomClampNG = false;
-                        // cv On
-                        Dio_Output(DO_MAP.CLAMPING_CV_RUN, true);
-                        Dio_Output(DO_MAP.NG_BOTTOM_JIG_CV_RUN, true);
-                        // 스토퍼 하강
-                        Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, false);
-                        Out_Cv_Step = OutCvSequence.Out_CV_Tray_NG_Check;
-                    }
-                    break;
-                case OutCvSequence.Out_CV_Tray_NG_Check:
-                    // Tray 도착 감지 센서 꺼질때까지 대기 후 Cv Off 
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.NG_BOTTOM_CV_DETECT_SS_1] == true)
-                    {
-                        // 스토퍼 상승
-                        Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, true);
-                        // cv off
-                        Dio_Output(DO_MAP.CLAMPING_CV_RUN, false);
-                        Dio_Output(DO_MAP.NG_BOTTOM_JIG_CV_RUN, false);
-                        Out_Cv_Step = OutCvSequence.Idle;
-                    }
-                    break;
-                case OutCvSequence.Out_CV_Off_Wait:
-                    // 도착 센서 받으면 CV Off 센터링 전징
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true)
-                        //&& Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_2] == true)
-                    {
-                        // cv Off
-                        Dio_Output(DO_MAP.CLAMPING_CV_RUN, false);
-                        
-                        Out_Cv_Step = OutCvSequence.Idle;
-                    }
-                    break;
-            }
-        }
-        private void Return_Top_CV_1_Logic()
-        {
-            switch(RetTopCV_1_Step)
-            {
-                case Rtn_Top_CV_1.Idle:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_SS] == false)
-                    {
-                        // cv on
-                        MoveTopReturnCvRun();
-                        Dio_Output(DO_MAP.TOP_RETURN_CV_RUN, true);
-                        Dio_Output(DO_MAP.TOP_RETURN_CV_RUN_2, true);
-                        TopReturnDone[0] = false;
-                        TopReturnDone[1] = false;
-                        RetTopCV_1_Step = Rtn_Top_CV_1.Top_CV_Stop;
-                    }
-                    else
-                    {
-                        RetTopCV_1_Step = Rtn_Top_CV_1.Top_Unclalmp_IF_Send;
-                    }
-                    break;
-                case Rtn_Top_CV_1.Top_CV_Stop:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_SS] == true
-                        || Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] == true)
-                    {
-                        if (TopReturnDone[0] == false)
-                        {
-                            // cv off
-                            MoveTopReturnCvStop();
-                            Dio_Output(DO_MAP.TOP_RETURN_CV_RUN, false);
-                            Dio_Output(DO_MAP.TOP_RETURN_CV_RUN_2, false);
-                            TopReturnDone[0] = true;
-                            RetTopCV_1_Step = Rtn_Top_CV_1.Top_Unclalmp_IF_Send;
-                        }
-                    }
-                    //if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_TOP_CV_DETECT_SS_2] == true
-                    //    || Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] == true)
-                    //{
-                    //    if (TopReturnDone[1] == false)
-                    //    {
-                    //        Dio_Output(DO_MAP.TOP_RETURN_CV_RUN, false);
-                    //        Dio_Output(DO_MAP.TOP_RETURN_CV_RUN_2, false);
-                    //        TopReturnDone[1] = true;
-                    //    }
-                    //}
-                    //if (TopReturnDone[0] == true && TopReturnDone[1] == true)
-                    //    RetTopCV_1_Step = Rtn_Top_CV_1.Top_Unclalmp_IF_Send;
+                        Global.instance.TactTimeStart = true;
+                        Global.instance.UnLoadingTactTimeStart();
+                        UnclampBottomReturnDone = true;
 
-                    // Top In에 제품이 없으면
-                    /*
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_SS] != true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] != true)
-                    {
-                        // Unclamp Top Return Interface Off
-                        Dio_Output(DO_MAP.TOP_RETURN_CV_INTERFACE, false);
-                        // cv on
-                        MoveTopReturnCvRun();
-                        if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN] != true)
-                            Dio_Output(DO_MAP.TOP_RETURN_CV_RUN, true);
-                        if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN_2] != true)
-                            Dio_Output(DO_MAP.TOP_RETURN_CV_RUN_2, true);
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, true);
+                        Dio_Output(DO_MAP.UNCLAMP_CV_CENTERING, true);
+                        UnClampStep = UnClampHandStep.Top_Hand_PickUp_Down_Check;
 
-                        RetTopCV_1_Step = Rtn_Top_CV_1.Top_CV_Stop;
-                        break;
-                    }
-                    // Return Top CV 에 Tray가 있으면 cv stop
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_TOP_CV_DETECT_SS_2] == true)
-                    {
-                        if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN] == true)
-                            Dio_Output(DO_MAP.TOP_RETURN_CV_RUN, false);
-                        if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN_2] == true)
-                            Dio_Output(DO_MAP.TOP_RETURN_CV_RUN_2, false);
-                    }
-                    */
-                    break;
-                    /*
-                case Rtn_Top_CV_1.Top_CV_Stop:
-                    // Top Pickup위치에 Tray가 진입되면 Top In CV Stop
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_SS] == true)
-                    {
-                        // cv on
-                        if (TopReturnDone[0] != true)
-                        {
-                            MoveTopReturnCvStop();
-                            TopReturnDone[0] = true;
-                        }
-                    }
-                    // Return Top CV에 Tray 
-                    //if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_TOP_CV_DETECT_SS_2] != true)
-                    //{
-                    //    TopReturnDone[1] = true;
-                    //}
-                    // 
-                    // Top Pickup에 Tray가 있고 Top Return CV 도착에 Tray가 있으면
-                    //if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_TOP_CV_DETECT_SS_2] == true 
-                    //    && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_SS] == true)
-                    //{
-                    //    if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN] == true)
-                    //        Dio_Output(DO_MAP.TOP_RETURN_CV_RUN, false);
-                    //    if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN_2] == true)
-                    //        Dio_Output(DO_MAP.TOP_RETURN_CV_RUN_2, false);
-                    //}
-                    //if (TopReturnDone[0] == true 
-                    //    && Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN] == false
-                    //    && Dio.DO_RAW_DATA[(int)DO_MAP.TOP_RETURN_CV_RUN_2] == false)
-                    //{
-                    //    TopReturnDone[0] = false;
-                    //    TopReturnDone[1] = false;
-                    //    if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_TOP_CV_DETECT_2_1] == false)
-                    //    {
-                    //        // Unclamp Top Return Interface On
-                    //        Dio_Output(DO_MAP.TOP_RETURN_CV_INTERFACE, true);
-                    //    }
-                        
-                    //    RetTopCV_1_Step = Rtn_Top_CV_1.Idle;
-                    //}
-                    break;
-                    */
-                case Rtn_Top_CV_1.Top_Unclalmp_IF_Send:
-                    // unclamp에서 I/F신호다 들오와있고 Top Return C/V투입에 제품이 없으면 I/F ON
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_TOP_CV_DETECT_2_1] == false
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] == true)
-                    {
-                        // Unclamp Top Return Interface On
-                        Dio_Output(DO_MAP.TOP_RETURN_CV_INTERFACE, true);
-                        RetTopCV_1_Step = Rtn_Top_CV_1.Top_Unclamp_IF_Off;
-                    }
-                    else
-                    {
-                        // not Receive for Unclamp
-                        RetTopCV_1_Step = Rtn_Top_CV_1.Idle;
+                        Global.Mlog.Info($"UnClampHandStep => UnclampBottomReturnDone : {UnclampBottomReturnDone.ToString()}");
+                        Global.Mlog.Info($"UnClampHandStep => Left Z Down");
+                        Global.Mlog.Info($"UnClampHandStep => CV Centering FWD");
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_PickUp_Down_Check");
                     }
                     break;
-                case Rtn_Top_CV_1.Top_Unclamp_IF_Off:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] == false)
+                case UnClampHandStep.Top_Hand_PickUp_Down_Check:
+                    // Top Hand Down 상태확인 완료 후 Grip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_DOWN_CYL] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_CENTERING_BWD_CYL] != true)
                     {
-                        // Unclamp Top Return Interface On
-                        Dio_Output(DO_MAP.TOP_RETURN_CV_INTERFACE, false);
-                        RetTopCV_1_Step = Rtn_Top_CV_1.Idle;
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_GRIP_F_FINGER, true);
+                        Dio_Output(DO_MAP.OUT_PP_LEFT_Z_GRIP_R_FINGER, true);
+                        UnClampStep = UnClampHandStep.Top_Hand_FR_Grip_Check;
+
+                        Global.Mlog.Info($"UnClampHandStep => F_FINGER Grip");
+                        Global.Mlog.Info($"UnClampHandStep => R_FINGER Grip");
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_PickUp_Down_Check");
                     }
                     break;
-            }
-        }
-        private void Return_Bottom_CV_Logic()
-        {
-            switch(RetBtmCV_Step)
-            {
-                case Rtn_BTM_CV.Idle:
-                    // Return Botton CV 도착위치에 clamp가 없으면  CV run
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_BOTTOM_CV_DETECT_SS_2] == false)
+                case UnClampHandStep.Top_Hand_FR_Grip_Check:
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_F_CYL] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_R_CYL] == true)
                     {
-                        Dio_Output(DO_MAP.BTM_RETURN_CV_RUN, true);
-                        Dio_Output(DO_MAP.BTM_RETURN_CV_RUN_2, true);
-                        RetBtmCV_Step = Rtn_BTM_CV.Rtn_BTM_CV_Stop;
-                    }
-                    else
-                    {
-                        // 이미 clamp가 있으면 Unclamp Interface 확인 한다.
-                        RetBtmCV_Step = Rtn_BTM_CV.Rtn_BTM_Unclmap_IF_Send;
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_GRIP, true);
+                        UnClampStep = UnClampHandStep.Top_Hand_Grip_Check;
+
+                        Global.Mlog.Info($"UnClampHandStep => Left Z Grip");
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_Grip_Check");
                     }
                     break;
-                case Rtn_BTM_CV.Rtn_BTM_CV_Stop:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_BOTTOM_CV_DETECT_SS_2] == true
-                        || Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_CV_INTERFACE] == true)
+                case UnClampHandStep.Top_Hand_Grip_Check:
+                    // Top Hand Grip 완료후 Up
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_CYL] == true)
                     {
-                        Dio_Output(DO_MAP.BTM_RETURN_CV_RUN, false);
-                        Dio_Output(DO_MAP.BTM_RETURN_CV_RUN_2, false);
-                        RetBtmCV_Step = Rtn_BTM_CV.Rtn_BTM_Unclmap_IF_Send;
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, false);
+                        UnClampStep = UnClampHandStep.Top_Hand_Up_Check;
+
+                        Global.Mlog.Info($"UnClampHandStep => Left Z Up");
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_Up_Check");
                     }
                     break;
-                case Rtn_BTM_CV.Rtn_BTM_Unclmap_IF_Send:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_BOTTOM_CV_DETECT_2_1] == false
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_CV_INTERFACE] == true)
+                case UnClampHandStep.Top_Hand_Up_Check:
+                    // Up 완료 후 Set Hand PickUP 위치 이동 & Turn
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true)
                     {
-                        Dio_Output(DO_MAP.BOTTOM_RETURN_CV_INTERFACE, true);
-                        RetBtmCV_Step = Rtn_BTM_CV.Rtn_BTM_Unclmap_IF_Off;
-                    }
-                    else
-                    {
-                        RetBtmCV_Step = Rtn_BTM_CV.Idle;
-                    }
-                    break;
-                case Rtn_BTM_CV.Rtn_BTM_Unclmap_IF_Off:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_CV_INTERFACE] == false)
-                    {
-                        Dio_Output(DO_MAP.BOTTOM_RETURN_CV_INTERFACE, false);
-                        RetBtmCV_Step = Rtn_BTM_CV.Idle;
+                        Dio_Output(DO_MAP.OUT_PP_RIGHT_TURN, true);
+                        Global.Mlog.Info($"UnClampHandStep => Right Turn");
+
+                        Global.Mlog.Info($"UnClampHandStep => Top Pickup Right Pos X");
+                        if (Ez_Model.MoveTopPickUpRightPosX()==true)
+                            UnClampStep = UnClampHandStep.Set_Hand_PickUp_Move_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Set_Hand_PickUp_Move_Check");
                     }
                     break;
-            }
-        }
-        private void Top_NG_CV_Logic()
-        {
-            // Top Tray CV Logic
-            // Top Tray 도착 센서 감지시 Cv Off 그전 계속 On
-            
-            switch(TopNgStep)
-            {
-                case Top_NG.Idle:
-                    TopNgStep = Top_NG.Top_CV_Run;
+                case UnClampHandStep.Set_Hand_PickUp_Move_Check:
+                    // Set Handler PickUp위치 도착 및 Turn 완료확인 후  Down
+                    if (Ez_Model.IsMoveTopPickUpRightDoneX()==true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_RIGHT_RETURN] == true
+                        )
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => Right Z Down");
+                        Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_DOWN, true);
+
+                        UnClampStep = UnClampHandStep.Set_Hand_Down_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Set_Hand_Down_Check");
+                    }
                     break;
-                case Top_NG.Top_CV_Run:
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.NG_TOP_CV_DETECT_SS_1] == true          // NG 도착 신호 감지
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.NG_TOP_CV_DETECT_SS_2] != true       // NG OUT 신호 미 감지
-                        && IsMoveTopNGPortDone() != true)
+                case UnClampHandStep.Set_Hand_Down_Check:
+                    // Down 완료하면 Vacuum On
+                    /***************************************************/
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_TR_RIGHT_Z_DOWN_CYL] == true)
+                    {
+                        if (_NoneSetTest == false)
+                            Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_VACUUM, true);
+                        Global.Mlog.Info($"UnClampHandStep => Vacuum On");
+
+                        UnClampStep = UnClampHandStep.Set_Hand_Vacuum_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Set_Hand_Vacuum_Check");
+                    }
+                    break;
+                case UnClampHandStep.Set_Hand_Vacuum_Check:
+                    // Vacuum 확인후 Up
+                    /***************************************************/
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_TR_RIGHT_Z_VACUUM] == true
+                        || _NoneSetTest == true
                         || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
                     {
-                        Dio_Output(DO_MAP.NG_TOP_JIG_CV_RUN, true);
-                        TopNgStep = Top_NG.Top_CV_Stop;
-                    }
-                    
-                    break;
-                case Top_NG.Top_CV_Stop:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.NG_TOP_CV_DETECT_SS_2] == true)
-                    {
-                        Dio_Output(DO_MAP.NG_TOP_JIG_CV_RUN, false);
-                        TopNgStep = Top_NG.Idle;
-                    }
-                    break;
-            }
-            
-        }
-        private void Bottom_Handel_Logic()
-        {
-            switch (In_Grip_Step)
-            {
-                case InBottomHandle.Idle:
-                    In_Grip_Step = InBottomHandle.Out_Position_Tray_Check;
-                    break;
-                case InBottomHandle.Out_Position_Tray_Check:
-                    
-                    // Set Grip UP
-                    if (Dio.DO_RAW_DATA[(int)DO_MAP.TRANSFER_LZ_DOWN_SOL] == true)
-                        Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, false);
-                    // Bottom Grip UP
-                    if (Dio.DO_RAW_DATA[(int)DO_MAP.TRANSFER_RZ_DOWN_SOL] == true)
-                        Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, false);
-                    // UnGrip
-                    if (Dio.DO_RAW_DATA[(int)DO_MAP.TRANSFER_RZ_GRIP_SOL] == true)
-                        Dio_Output(DO_MAP.TRANSFER_RZ_GRIP_SOL, false);
+                        Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_DOWN, false);
 
-                    // 트레이가 없으면
-                    In_Grip_Step = InBottomHandle.TrayInSecsorCheck;
+                        Global.Mlog.Info($"UnClampHandStep => Right Z UP");
+                        UnClampStep = UnClampHandStep.Set_Hand_Up_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Set_Hand_Up_Check");
+                    }
                     break;
-                case InBottomHandle.TrayInSecsorCheck:
-                    // Bottom Handler Up,Ungrip상태 확인
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_UP_CYL_SS] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_UP_CYL_SS] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_UNGRIP_CYL_SS] == true)
+                case UnClampHandStep.Set_Hand_Up_Check:
+                    // Set hand up완료 후 Put down위치로 이동 & hand Return
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_TR_RIGHT_Z_UP_CYL] == true)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => Right Turn");
+                        Dio_Output(DO_MAP.OUT_PP_RIGHT_TURN, false);
+
+                        Global.Mlog.Info($"UnClampHandStep => Top Move PutDown Pos X");
+                        if (Ez_Model.MoveTopPutDownPosX()==true)
+                            UnClampStep = UnClampHandStep.Move_PutDown_Done_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Move_PutDown_Done_Check");
+                    }
+                    break;
+                case UnClampHandStep.Move_PutDown_Done_Check:
+                    // putdown위치 도착 확인 후 top hand cv에 clamp가 있는지 확인 한다.
+                    if (Ez_Model.IsMoveTopPutDownDoneX()==true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_RIGHT_TURN] == true)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_PutDown");
+                        UnClampStep = UnClampHandStep.Top_Hand_PutDown;
+                    }
+                    break;
+                case UnClampHandStep.Top_Hand_PutDown:
+                    // cv에 clamp가 없으면 top hand down
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_1] == false
                         || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
                     {
-                        // Set handler 90도 Turn
-                        Dio_Output(DO_MAP.TRANSFER_LZ_TURN_SOL, true);
-                        // Bottom Pickup Move , false: tray pickup true: set pickup
-                        Dio_Output(DO_MAP.TRANSFER_FORWARD_SOL, false);
-                        
-                        In_Grip_Step = InBottomHandle.Set_Handler_Down;
+                        Global.Mlog.Info($"UnClampHandStep => Left Top Clamp Down");
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, true);
+                        UnClampStep = UnClampHandStep.Top_Hand_PutDown_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_PutDown_Check");
                     }
                     break;
-                case InBottomHandle.Set_Handler_Down:
-                    // Left 위치 도착 확인
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_FORWARD_CYL_SS] == true)
+                case UnClampHandStep.Top_Hand_PutDown_Check:
+                    // top down 완료하면 ungrip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_DOWN_CYL] == true)
                     {
-                        // Bottom Clamp가 있는지 확인한다.
-                        if ((Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_4] == true
-                            && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_5] == true
-                            && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_VACUUM_SS] == true
-                            && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_TURN_CYL_SS] == true)
-                            || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_GRIP, false);
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_GRIP_F_FINGER, false);
+                        Dio_Output(DO_MAP.OUT_PP_LEFT_Z_GRIP_R_FINGER, false);
+                        UnClampStep = UnClampHandStep.Top_Hand_UnGrip_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_UnGrip_Check");
+                    }
+                    break;
+                case UnClampHandStep.Top_Hand_UnGrip_Check:
+                    // ungrip완료후 top hand up
+                    bool ret = Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_F_CYL];
+                    ret = Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_R_CYL];
+
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UNGRIP_CYL] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_F_CYL] == false
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_R_CYL] == false)
+                    {
+                        Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, false);
+
+                        Global.Mlog.Info($"UnClampHandStep => Left Z Up");
+                        UnClampStep = UnClampHandStep.Top_Hand_PutDown_Up_Check;
+                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_PutDown_Up_Check");
+                    }
+                    break;
+                case UnClampHandStep.Top_Hand_PutDown_Up_Check:
+                    // top hand up완료하면 Set Hand Down 조건 확인으로 넘어간다.
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true)
+                        UnClampStep = UnClampHandStep.Set_Hand_PutDown;
+                    break;
+                case UnClampHandStep.Set_Hand_PutDown:
+                    // set putdown 위치에 제품이 없으면 & Return 되있으면 down
+                    /*조건 확인 필요, 인터페이 신호가 있을꺼 같음*/
+                    /***************************************************/
+                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.REAR_INTERFACE_1] == false)
+                        || _NoneSetTest == true
+                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => SET Rirht PutDown Z Down");
+                        Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_DOWN, true);
+                        UnClampStep = UnClampHandStep.set_Hand_PutDown_Check;
+                        Global.Mlog.Info($"UnClampHandStep => set_Hand_PutDown_Check");
+                    }
+                    break;
+                case UnClampHandStep.set_Hand_PutDown_Check:
+                    // set hand down완료후 blow on
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_TR_RIGHT_Z_DOWN_CYL] == true)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => SET Right Z BLOW On");
+                        Global.Mlog.Info($"UnClampHandStep => Right Z UP");
+                        Dio_Output(DO_MAP.OUT_PP_RIGHT_Z_BLOW, true);
+                        Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_DOWN, false);
+
+                        Global.Mlog.Info($"UnClampHandStep => Set_Hand_PutDown_Up_Check");
+                        UnClampStep = UnClampHandStep.Set_Hand_PutDown_Up_Check;
+                    }
+                    break;
+                case UnClampHandStep.Set_Hand_PutDown_Up_Check:
+                    // up완료하면 Idel로 이동한다.
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_TR_RIGHT_Z_UP_CYL] == true)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => SET Right Z BLOW Off");
+                        Dio_Output(DO_MAP.OUT_PP_RIGHT_Z_BLOW, false);
+                        if (SingletonManager.instance.SystemModel.NfcUseNotUse == "Use")
                         {
-                            // Bottom clamp가 놓여져 있으면 Put Down 동작을 한다.
-                            Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, true);
-                            In_Grip_Step = InBottomHandle.Set_PutDown;
+                            UnClampStep = UnClampHandStep.Set_Http_Request_Send;
+                            Global.Mlog.Info($"UnClampHandStep => Set_Http_Request_Send");
                         }
                         else
                         {
-                            // Bottom Clamp가 없으면 Clamp Pickup 으로 이동한다.
-                            In_Grip_Step = InBottomHandle.Bottom_Clmap_Pickup;
+                            UnClampStep = UnClampHandStep.Idle;
+                            Global.Mlog.Info($"UnClampHandStep => Idle");
                         }
                     }
-                            
                     break;
-                case InBottomHandle.Set_PutDown:
-                    // Set Handler Down 확인
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_DOWN_CYL_SS] == true)
+                case UnClampHandStep.Set_Http_Request_Send:
+                    //if (!string.IsNullOrEmpty(SingletonManager.instance.Nfc_Data))
+                    string nfc = SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Nfc].NfcData;
+                    Global.Mlog.Info($"UnClampHandStep => NFC Data : {nfc}");
+                    if (!string.IsNullOrEmpty(nfc))
                     {
-                        // Vacuum Off
-                        // Blow On
-                        // Set Handler Up
-                        Dio_Output(DO_MAP.TRANSFER_LZ_VACUUM_SOL, false);
-                        Dio_Output(DO_MAP.TRANSFER_LZ_BOLW_SOL, true);
-                        Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, false);
-                        In_Grip_Step = InBottomHandle.Set_Handler_Up;
+                        SingletonManager.instance.HttpJsonModel.SendRequest("saveInspInfo", nfc, "PASS");
+                        UnClampStep = UnClampHandStep.Set_Http_Result_Wait;
+                    }
+                    else
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => NFC Data is Empty");
+                        UnClampStep = UnClampHandStep.Idle;
                     }
                     break;
-                case InBottomHandle.Set_Handler_Up:
-                    // Set Handler Up,Vacuum Off
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_UP_CYL_SS] == true
-                    && (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_VACUUM_SS] == false
-                    || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry))
+                case UnClampHandStep.Set_Http_Result_Wait:
+                    if (SingletonManager.instance.HttpJsonModel.DataSendFlag == true)
                     {
-                        // Bolw off
-                        // centering backward
-                        Dio_Output(DO_MAP.TRANSFER_LZ_BOLW_SOL, false);
-                        Dio_Output(DO_MAP.CLAMPING_CV_CENTERING_SOL_2, false);
-                        Dio_Output(DO_MAP.CLAMPING_CV_UP_SOL, false);
-                        In_Grip_Step = InBottomHandle.Set_PutDown_Done;
-                    }
-                    break;
-                case InBottomHandle.Set_PutDown_Done:
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_CENTERING_CYL_SS_2_BWD] == true
-                       && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DOWN_CYL_SS] == true)
-                       || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        In_Grip_Step = InBottomHandle.Bottom_Clmap_Pickup;
-                        /****************************************************/
-                        // 여기서 CV Move 한다.
-                        // 스토퍼 상승
-                        SingletonManager.instance.BottomClampDone = true;
-                        // 불량이면
-                        if (SingletonManager.instance.EquipmentMode != EquipmentMode.Dry)
-                            SingletonManager.instance.BottomClampNG = true;
-                        // 아니면 
-                        SingletonManager.instance.BottomClampNG = false;
-                    }
-                    break;
-                case InBottomHandle.Bottom_Clmap_Pickup:
-                    // Return CV에 bottom clamp가 있으면 
-                    if ( Dio.DI_RAW_DATA[(int)DI_MAP.RETURN_BOTTOM_CV_DETECT_SS_2] == true
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, true);
-                        In_Grip_Step = InBottomHandle.Bottom_Clamp_Grip;
-                    }
-                    break;
-                case InBottomHandle.Bottom_Clamp_Grip:
-                    // Bottom clamp Grip
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_DOWN_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_RZ_GRIP_SOL, true);
-                        In_Grip_Step = InBottomHandle.Bottom_Handler_Up;
-                    }
-                    break;
-                case InBottomHandle.Bottom_Handler_Up:
-                    // Bottom handler Up
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_GRIP_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, false);
-                        In_Grip_Step = InBottomHandle.Bottom_PicUp_Done;
-                    }
-                    break;
-                case InBottomHandle.Bottom_PicUp_Done:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_UP_CYL_SS] == true)
-                    {
-                        In_Grip_Step = InBottomHandle.Bottom_Handler_Forward;
-                    }
-                    break;
-                
-                case InBottomHandle.Bottom_Handler_Forward:
-                    // Panel Grip Return
-                    Dio_Output(DO_MAP.TRANSFER_LZ_TURN_SOL, false);
-                    // Panel Pickup Move
-                    Dio_Output(DO_MAP.TRANSFER_FORWARD_SOL, true);
-                    In_Grip_Step = InBottomHandle.Set_PickUp_Down;
-                    break;
-                case InBottomHandle.Set_PickUp_Down:
-                    // Set Pickup으로 Turn하고 전진
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_BACKWARD_CYL_SS] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_RETURN_CYL_SS] == true)
-                    {
-                        // Set 진입 되있으면
-                        if (Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_OUT_SS_2] == true
-                            || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                        Global.Mlog.Info($"UnClampHandStep => rsltCode : {SingletonManager.instance.HttpJsonModel.ResultCode}");
+                        if (SingletonManager.instance.HttpJsonModel.ResultCode == "PASS")
                         {
-                            // Set Handler Down
-                            Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, true);
-                            In_Grip_Step = InBottomHandle.Set_Vacuum_On;
+                            Global.Mlog.Info($"UnClampHandStep => NFC Result : PASS");
                         }
-                        //else
-                        //{
-                        //    In_Grip_Step = InBottomHandle.Bottom_PutDown_Down;
-                        //}
-                    }
-                    break;
-                case InBottomHandle.Set_Vacuum_On:
-                    // Vacuum On
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_DOWN_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_LZ_VACUUM_SOL , true);
-                        In_Grip_Step = InBottomHandle.Set_Centering_Bwd;
-                    }
-                    break;
-                case InBottomHandle.Set_Centering_Bwd:
-                    // Set CV Out centering Backward
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_VACUUM_SS] == true
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        Dio_Output(DO_MAP.IN_SET_CV_CENTERING, false);
-                        In_Grip_Step = InBottomHandle.Set_PickUp_Up;
-                    }
-                    break;
-                case InBottomHandle.Set_PickUp_Up:
-                    // centerring 후진 센서가 뭔지 모르겠다.???
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_UNALIGN_CYL_SS] == false)
-                    {
-                        // Set Handler Up
-                        Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, false);
-                        In_Grip_Step = InBottomHandle.Set_PickUp_Done;
-                    }
-                    break;
-                case InBottomHandle.Set_PickUp_Done:
-                    
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_LZ_UP_CYL_SS] == true)
-                    {
-                        In_Grip_Step = InBottomHandle.Bottom_PutDown_Down;
-                    }
-                    break;
-                case InBottomHandle.Bottom_PutDown_Down:
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_4] == false
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_5] == false
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_6] == false
-                        && Dio.DO_RAW_DATA[(int)DO_MAP.CLAMPING_CV_RUN] == false)
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, true);
-                        In_Grip_Step = InBottomHandle.Bottom_UnGrip;
-                    }
-                    break;
-                case InBottomHandle.Bottom_UnGrip:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_DOWN_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_RZ_GRIP_SOL, false);
-                        In_Grip_Step = InBottomHandle.Bottom_PutDown_Up;
-                    }
-                    break;
-                case InBottomHandle.Bottom_PutDown_Up:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_UNGRIP_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, false);
-                        In_Grip_Step = InBottomHandle.Bottom_Centering_Fwd;
-                    }
-                    break;
-                case InBottomHandle.Bottom_Centering_Fwd:
-                    // Bottom sentering fwd
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_RZ_UP_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.CLAMPING_CV_CENTERING_SOL_2, true);
-                        Dio_Output(DO_MAP.CLAMPING_CV_UP_SOL, true);
-                        In_Grip_Step = InBottomHandle.Bottom_PutDown_Done;
-                    }
-                    break;
-                case InBottomHandle.Bottom_PutDown_Done:
-                    // Bottom sentering fwd
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLMAPING_CV_UP_CYL_SS] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_CENTERING_CYL_SS_2_FWD] == true)
-                    {
-                        // Out X Handler 동작하지 않을때를 까지 대기한다.
-                        if (SingletonManager.instance.IsY_PickupColl == false
-                            && IsOutHandlerSaftyInterlockY() == true)
-                            In_Grip_Step = InBottomHandle.Idle;
-                    }
-                    break;
-             
-            }
-            int step = (int)In_Grip_Step;
-            Global.instance.Write_Sequence_Log("BOTTOM_STEP", step.ToString());
-            if (Dio.DO_RAW_DATA[(int)DO_MAP.TRANSFER_FORWARD_SOL] == true)
-                Global.instance.Write_Sequence_Log("BOTTOM_HANDLER_POS", "LEFT");
-            else
-                Global.instance.Write_Sequence_Log("BOTTOM_HANDLER_POS", "RIGHT");
-
-            if (Dio.DO_RAW_DATA[(int)DO_MAP.TRANSFER_RZ_DOWN_SOL] == false)
-                Global.instance.Write_Sequence_Log("BOTTOM_RZ", "UP");
-            else
-                Global.instance.Write_Sequence_Log("BOTTOM_RZ", "DOWN");
-            if (Dio.DO_RAW_DATA[(int)DO_MAP.TRANSFER_LZ_DOWN_SOL] == false)
-                Global.instance.Write_Sequence_Log("BOTTOM_LZ", "UP");
-            else
-                Global.instance.Write_Sequence_Log("BOTTOM_LZ", "DOWN");
-        }
-        private void Top_Handel_Logic()
-        {
-            switch (Top_Handle_Step)
-            {
-                case TopHandle.Idle:
-                    // Up sensor Check 하여 하강 상태이면 Up하고 Grip unlock한다
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_2] == true)
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_GRIP_SOL, false);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, false);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, false);
-                        Top_Handle_Step = TopHandle.Top_Handle_Up_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_Up_Check:
-                    // up 상태이면 Pickup위치로 이동하여 대기한다.
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_2] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_UNGRIP_CYL_SS] == true
-                        && IsOutHandlerPickupPosY() != true)
-                    {
-                        if (MoveTopHandlerPickUpPos() == true)
-                            Top_Handle_Step = TopHandle.Top_Handle_Pickup_Position_Check;
-                    }
-                    
-                    break;
-                case TopHandle.Top_Handle_Pickup_Position_Check:
-                    // pickup위치에 도착확인
-                    if (IsTopHandlerPickUpPos() == true)
-                    {
-                        // X022,X023 센서 용도 확인 후 사용
-                        //if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true
-                        //    && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_2] == true)
-
-                        // Top Clamping 완료한 상태이면 X Handle Coll Flag ON
-                        if (TopClampingDone == true)
+                        else
                         {
-                            // X Handle Pickup완료 후 Clamping 상태 변경
-                            TopClampingDone = false;
-                            SingletonManager.instance.IsY_PickupColl = true;
+                            Global.Mlog.Info($"UnClampHandStep => NFC Result : FAIL");
                         }
-                        Top_Handle_Step = TopHandle.Top_Tray_In_Check;
-                    }
-                    break;
-                case TopHandle.Top_Tray_In_Check:
-                    // Top Tray in 센서 확인 후 tryp가있으면 Down 한다.
-                    if(Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_SS] == true
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, true);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, false);
-                        Top_Handle_Step = TopHandle.Top_Handle_Down_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_Down_Check:
-                    // Down완료 후 Grip Lock
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_2] == true)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_GRIP_SOL, true);
-                        Top_Handle_Step = TopHandle.Top_Handle_Grip_Lock_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_Grip_Lock_Check:
-                    // Grip완료 후 up
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_GRIP_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, false);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, false);
-                        Top_Handle_Step = TopHandle.Top_Handle_PutUp_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_PutUp_Check:
-                    // Up 완료 하면 tray 배출위치에 제품이 있는지 확인 한다
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_2] == true)
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        Top_Handle_Step = TopHandle.Top_Handle_Tray_Out_Wait;
-                    }
-                    break;
-                case TopHandle.Top_Handle_Tray_Out_Wait:
-                    // Tray Out위치에 Bottom이 들어와 있고  Out X 축이 Pickup위치에 있지않으면
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_STOPER_UP_CYL_SS] == true
-                        && SingletonManager.instance.IsY_PickupColl == false)
-                    {
-                        // Tray OK이면 안착위치로 이동
-                        Top_Handle_Step = TopHandle.Buttom_Clamp_Arrival_Check;
-
-                        // Tray NG이면 NG 포지션으로 이동
-                        /***************************************************************/
-                        //if (MoveTopHandlerNGPort() == true)
-                        //    Top_Handle_Step = TopHandle.Top_Handle_NG_Port_Move_Check;
-                    }
-                    if (SingletonManager.instance.IsY_PickupColl == false && SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        // Tray OK이면 안착위치로 이동
-                        Top_Handle_Step = TopHandle.Buttom_Clamp_Arrival_Check;
-
-                        // Tray NG이면 NG 포지션으로 이동
-                        /***************************************************************/
-                        //if (MoveTopHandlerNGPort() == true)
-                        //    Top_Handle_Step = TopHandle.Top_Handle_NG_Port_Move_Check;
-                    }
-                    break;
-                
-                case TopHandle.Top_Handle_NG_Port_Move_Check:
-                    // NG 안착위치에 도착했는지 확인 후 Down 한다
-                    if (IsMoveTopNGPortDone() == true)
-                    {
-                        // NG Port에 Clmap가 없으면 
-                        if (Dio.DI_RAW_DATA[(int)DI_MAP.NG_TOP_CV_DETECT_SS_1] != true)
-                        {
-                            Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, true);
-                            Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, true);
-                            Top_Handle_Step = TopHandle.Top_Handle_NG_Port_Down_check;
-                        }
-                    }
-                    break;
-                case TopHandle.Top_Handle_NG_Port_Down_check:
-                    // NG Port Down 완료 후 Grip Unlock
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_2] == true)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_GRIP_SOL, false);
-                        Top_Handle_Step = TopHandle.Top_Handle_NG_Port_UnGrip_check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_NG_Port_UnGrip_check:
-                    // NG Port Down 완료 후 Grip Unlock
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_UNGRIP_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, false);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, false);
-                        Top_Handle_Step = TopHandle.Top_Handle_NG_Port_Up_check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_NG_Port_Up_check:
-                    // NG Port Down 완료 후 Grip Unlock
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_2] == true)
-                    {
-                        Top_Handle_Step = TopHandle.Idle;
-                    }
-                    break;
-                case TopHandle.Buttom_Clamp_Arrival_Check:
-                    // Bottom Clamp 도착 확인 후 PutDown 한다
-                    // Stoper가 Down되있는 상태는 Bottom Clamp NG 배출이기때문에 
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_STOPER_UP_CYL_SS] == false)
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                    {
-                        if (MoveTopHandlerPutDownPos() == true)
-                            Top_Handle_Step = TopHandle.Top_Handle_PutDown_Move_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_PutDown_Move_Check:
-                    // ok일경우 안착위치도착 확인 후 Centering 전진
-                    if (IsTopHandlerPutDownPos() == true )
-                    {
-                        Dio_Output(DO_MAP.CLAMPING_CV_CENTERING_SOL_1, true);
-                        Top_Handle_Step = TopHandle.Top_Handle_Centering_FWD_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_Centering_FWD_Check:
-                    // centering 전진 센서 확인 후 후진
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_CENTERING_CYL_SS_1_FWD] == true)
-                    {
-                        //Dio_Output(DO_MAP.TOP_JIG_TR_Z_UP_SOL_1, true);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, true);
-
-                        Top_Handle_Step = TopHandle.Top_Handle_PutDown_Check;
-                    }
-                    break;
-                
-                case TopHandle.Top_Handle_PutDown_Check:
-                    // PutDown 완료 후 grip UnLock
-                    //if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_1] == true
-                    //    && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_2] == true)
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_DOWN_CYL_SS_2] == true)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_GRIP_SOL, false);
-                        Top_Handle_Step = TopHandle.Top_Handle_Grip_Unlock_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_Grip_Unlock_Check:
-                    // grip UnLock 
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_RT_Z_UNGRIP_CYL_SS] == true)
-                    {
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, false);
-                        Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, false);
-                        //Dio_Output(DO_MAP.CLAMPING_CV_CENTERING_SOL_1, false);
-                        //Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, false); // stopper down
-
-                        Top_Handle_Step = TopHandle.Top_Handle_PutDown_Up_Check;
-                    }
-                    break;
-                case TopHandle.Top_Handle_PutDown_Up_Check:
-                    // centering 후진 센서 확인 후 PutDown 한다
-                    //if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_CENTERING_CYL_SS_1_BWD] == true
-                    //    && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_1] == true
-                    //    && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_2] == true)
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_1] == true
-                    && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_TR_Z_UP_CYL_SS_2] == true)
-                    {
-                        // Top Clamping 완료 상태 변경
-                        TopClampingDone = true;
-                        Top_Handle_Step = TopHandle.Idle;
+                        UnClampStep = UnClampHandStep.Idle;
                     }
                     break;
             }
-            int step = (int)Top_Handle_Step;
-            Global.instance.Write_Sequence_Log("TOP_STEP", step.ToString());
-            Global.instance.Write_Sequence_Log("Y_PICKUP_COLL_FLAG", SingletonManager.instance.IsY_PickupColl.ToString());
-
-            if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1] == false)
-                Global.instance.Write_Sequence_Log("TOP_JIG_1", "UP");
-            else
-                Global.instance.Write_Sequence_Log("TOP_JIG_1", "DOWN");
-            if (Dio.DO_RAW_DATA[(int)DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2] == false)
-                Global.instance.Write_Sequence_Log("TOP_JIG_2", "UP");
-            else
-                Global.instance.Write_Sequence_Log("TOP_JIG_2", "DOWN");
+            int step = (int)UnClampStep;
+            Global.instance.Write_Sequence_Log("UNCLAMP_STEP", step.ToString());
         }
-        private void Out_Handle_Y_Logic()
+        public void ReturnBottomHandlerLogic()
         {
-            switch(Out_Handle_Step)
+            switch(RtnBtmStep)
             {
-                case OutHandle.Idle:
-                    Out_Handle_Step = OutHandle.Out_Handle_Z_Up;
+                case ReturnBottomStep.Idle:
+                    // Putdown 위치가 아니면 put down으로 이동 시킨다
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_X_RIGHT] == false)
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_X_FWD, false);
+                    RtnBtmStep = ReturnBottomStep.Ready_Move_Check;
+                    Global.Mlog.Info($"ReturnBottomStep => Ready_Move_Check");
                     break;
-                case OutHandle.Out_Handle_Z_Up:
-                    if (IsOutHandlerReadyDoneZ() != true)
-                        MoveOutHandlerRadyZ();
-                    Out_Handle_Step = OutHandle.Out_Handle_Z_Up_Done;
-                    break;
-                case OutHandle.Out_Handle_Z_Up_Done:
-                    if (IsOutHandlerReadyDoneZ() == true)
+                case ReturnBottomStep.Ready_Move_Check:
+                    // put down위치에서 clamp 도착신호 on& top hand put down위치에 있으면 Pickup 위치 이동
+                    // cv에 다시 들어온 clamp임을 확인하기 위하여 centring 전진상태를 확인한다.
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == true
+                        //&& Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_CENTERING_FWD_CYL] == false 
+                        && Ez_Model.IsMoveTopPutDownDoneX() == true
+                        && UnclampBottomReturnDone == true)
                     {
-                        // Out Handle Z up 완료 후 Tray Sensor 확인
-                        Out_Handle_Step = OutHandle.Top_Tray_Sensor_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => UnclampBottomReturnDone : {UnclampBottomReturnDone.ToString()}");
+                        Global.Mlog.Info($"ReturnBottomStep => PutDown Pos Done X");
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_DOWN] == true)
+                            Dio_Output(DO_MAP.BOTTOM_RETURN_Z_DOWN, false);
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_X_FWD, true);
+                        Global.Mlog.Info($"ReturnBottomStep => Bottom Retutn X Move Right");
+
+                        RtnBtmStep = ReturnBottomStep.Right_Move_Done;
+                        Global.Mlog.Info($"ReturnBottomStep => Right_Move_Done");
+                    }
+                    if (SingletonManager.instance.EquipmentMode == EquipmentMode.Dry
+                        &&Ez_Model.IsMoveTopPutDownDoneX() == true
+                        && UnclampBottomReturnDone == true)
+                    {
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_DOWN] == true)
+                            Dio_Output(DO_MAP.BOTTOM_RETURN_Z_DOWN, false);
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_X_FWD, true);
+
+                        RtnBtmStep = ReturnBottomStep.Right_Move_Done;
                     }
                     break;
-                case OutHandle.Top_Tray_Sensor_Check:
-                    // Tray Sensor 들어오고 & Top Handle이 PIckup위치에 있을때
-                    // Bottom Handle  Set Pickup위치에서 Down된 상태이면 
-                    // Out Handle Pickup위치로 이동한다.
-                    if (SingletonManager.instance.IsY_PickupColl == true
-                        && IsTopHandlerPickUpPos() == true                                 // Top Handle Pickup위치
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true     // Out CV 배출 Bottom Tray Sensor
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_2] == true     // Out CV 배출 Top Tray Sensor
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_BACKWARD_CYL_SS] == true)  // Bottom Handle Left 위치 도착
+                case ReturnBottomStep.Right_Move_Done:
+                    // pick up위치 도착하면 Bottom centering bwd
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_X_RIGHT] == true)
                     {
-                        // Out Handle X축 Pickup위치로 이동
-                        if (MoveOutHandlerPickUpY() == true)
-                            Out_Handle_Step = OutHandle.Out_Handle_X_Pickup_Pos_Check;
+                        Dio_Output(DO_MAP.UNCLAMP_CV_CENTERING, false);
+                        Global.Mlog.Info($"ReturnBottomStep => CV Centering BWD");
+                        RtnBtmStep = ReturnBottomStep.Bottom_Centering_BWD_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => Bottom_Centering_BWD_Check");
                     }
-                    if (SingletonManager.instance.IsY_PickupColl == true
-                        && IsTopHandlerPickUpPos() == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_BACKWARD_CYL_SS] == true
+                    break;
+                case ReturnBottomStep.Bottom_Centering_BWD_Check:
+                    // centering 후진 확인 후 hand down
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_CENTERING_BWD_CYL] == true)
+                    {
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_Z_DOWN, true);
+                        Global.Mlog.Info($"ReturnBottomStep => Z Down");
+                        Global.Mlog.Info($"ReturnBottomStep => Hand_Down_Check");
+                        RtnBtmStep = ReturnBottomStep.Hand_Down_Check;
+                    }
+                    break;
+                case ReturnBottomStep.Hand_Down_Check:
+                    // down 완료 후 Grip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_DOWN] == true)
+                    {
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_Z_GRIP, true);
+                        Global.Mlog.Info($"ReturnBottomStep => Z Grip");
+                        RtnBtmStep = ReturnBottomStep.Grip_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => Grip_Check");
+                    }
+                    break;
+                case ReturnBottomStep.Grip_Check:
+                    // grip 확인 후 up
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_GRIP] == true)
+                    {
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_Z_DOWN, false);
+                        Global.Mlog.Info($"ReturnBottomStep => Z Up");
+                        RtnBtmStep = ReturnBottomStep.Hand_Up_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => Hand_Up_Check");
+                    }
+                    break;
+                case ReturnBottomStep.Hand_Up_Check:
+                    // Up 완료하면 Put down 위치 이동 
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_UP] == true)
+                    {
+                        Global.Mlog.Info($"ReturnBottomStep => Bottom X Move Left");
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_X_FWD, false);
+                        RtnBtmStep = ReturnBottomStep.Left_Move_Done;
+                        Global.Mlog.Info($"ReturnBottomStep => Left_Move_Done");
+                    }
+                    break;
+                case ReturnBottomStep.Left_Move_Done:
+                    // put down위치 도착하면 clamp장비한데 Interface신호 on
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_X_LEFT] == true)
+                    {
+                        Global.Mlog.Info($"ReturnBottomStep => Interface Send On");
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_CV_INTERFACE, true);
+                        RtnBtmStep = ReturnBottomStep.Clamp_IF_Return_Wait;
+                        Global.Mlog.Info($"ReturnBottomStep => Clamp_IF_Return_Wait");
+                    }
+                    break;
+                case ReturnBottomStep.Clamp_IF_Return_Wait:
+                    // clamp장비 Interface 응답 들어오면 cv에 제품있는지 확인하고 Down
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_CV_INTERFACE] == true
+                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                    {
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_Z_DOWN, true);
+                        Global.Mlog.Info($"ReturnBottomStep => Bottom CV Z PutDown");
+
+                        RtnBtmStep = ReturnBottomStep.PutDown_Down_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => PutDown_Down_Check");
+                    }
+                    break;
+                case ReturnBottomStep.PutDown_Down_Check:
+                    // Down완료 후 Ungrip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_DOWN] == true)
+                    {
+                        Global.Mlog.Info($"ReturnBottomStep => Ungrip");
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_Z_GRIP, false);
+                        RtnBtmStep = ReturnBottomStep.PutDown_UnGrip_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => PutDown_UnGrip_Check");
+                    }
+                        
+                    break;
+                case ReturnBottomStep.PutDown_UnGrip_Check:
+                    // up완료 후 Interface off
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_UNGRIP] == true)
+                    {
+                        Global.Mlog.Info($"ReturnBottomStep => Z Up");
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_Z_DOWN, false);
+                        RtnBtmStep = ReturnBottomStep.PutDown_Up_Check;
+                        Global.Mlog.Info($"ReturnBottomStep => PutDown_Up_Check");
+                    }
+                    break;
+                case ReturnBottomStep.PutDown_Up_Check:
+                    // up완료 후 Interface off
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.BOTTOM_RETURN_Z_UP] == true)
+                    {
+                        UnclampBottomReturnDone = false;
+                        Global.Mlog.Info($"ReturnBottomStep => UnclampBottomReturnDone : {UnclampBottomReturnDone.ToString()}");
+                        Dio_Output(DO_MAP.BOTTOM_RETURN_CV_INTERFACE, false);
+                        Global.Mlog.Info($"ReturnBottomStep => Interface Send Off");
+                        RtnBtmStep = ReturnBottomStep.Idle;
+                    }
+                    break;
+            }
+            int step = (int)RtnBtmStep;
+            Global.instance.Write_Sequence_Log("RTN_BTM_STEP", step.ToString());
+            Global.instance.Write_Sequence_Log("RTN_BTM_DONE", UnclampBottomReturnDone.ToString());
+        }
+        public void ReturnTopHandlerLogic()
+        {
+            switch(RtnTopStep)
+            {
+                case ReturnTopStep.Idle:
+                    // Right 위치가 아니면 Right 이동 시킨다
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_DOWN] == true)
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_DOWN, false);
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_X_LEFT_CYL] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_X_FWD, true);
+                    }
+
+                    RtnTopStep = ReturnTopStep.Top_Clamp_Arrival_Check;
+                    break;
+                case ReturnTopStep.Top_Clamp_Arrival_Check:
+                    // hand가 right위치에 있고 Clamp가 진입되있으면 down
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_X_RIGHT_CYL] == true
+                        && (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_2] == true 
+                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry))
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_DOWN, true);
+
+                        RtnTopStep = ReturnTopStep.Hand_Down_Check;
+                    }
+                    break;
+                case ReturnTopStep.Hand_Down_Check:
+                    // down완료 후 grip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_DOWN] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_GRIP, true);
+
+                        RtnTopStep = ReturnTopStep.Grip_Check;
+                    }
+                    break;
+                case ReturnTopStep.Grip_Check:
+                    // grip 완료후 up
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_GRIP] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_UNGRIP] == false)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_DOWN, false);
+
+                        RtnTopStep = ReturnTopStep.Hand_Up_Check;
+                    }
+                    break;
+                case ReturnTopStep.Hand_Up_Check:
+                    // up 완료 후 left로 이동
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_UP] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_X_FWD, false);
+
+                        RtnTopStep = ReturnTopStep.Left_Move_Done;
+                    }
+                    break;
+                case ReturnTopStep.Left_Move_Done:
+                    // Put down위치에 도착하면 Clamp에게 Interface on
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_X_LEFT_CYL] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_CV_INTERFACE, true);
+
+                        RtnTopStep = ReturnTopStep.Clamp_Return_Wait;
+                    }
+                    break;
+                case ReturnTopStep.Clamp_Return_Wait:
+                    // clmap interface 응답오면 cv에 제품있는지 확인하고 down한다.
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] == true
+                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_DOWN, true);
+                        RtnTopStep = ReturnTopStep.PutDown_Down_Check;
+                    }
+                    break;
+                case ReturnTopStep.PutDown_Down_Check:
+                    // down 완료후 ungrip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_DOWN] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_GRIP, false);
+                        RtnTopStep = ReturnTopStep.UnGrip_Check;
+                    }
+                    break;
+                case ReturnTopStep.UnGrip_Check:
+                    // ungrip완료 후 up
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_UNGRIP] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_Z_DOWN, false);
+
+                        RtnTopStep = ReturnTopStep.PutDown_Up_Check;
+                    }
+                    break;
+                case ReturnTopStep.PutDown_Up_Check:
+                    // up완료하면 Interface off하고 right로 이동
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_Z_UP] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_RETURN_CV_INTERFACE, false);
+                        Dio_Output(DO_MAP.TOP_RETURN_X_FWD, true);
+                        RtnTopStep = ReturnTopStep.Right_Move_Done;
+                    }
+                    break;
+                case ReturnTopStep.Right_Move_Done:
+                    // right 위치 도착 확인하면서 interface off 되였는지 확인하고 될때까지 보내고 다음 step으로 지나간다.
+                    //if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_CV_INTERFACE] == false
+                     if( Dio.DI_RAW_DATA[(int)DI_MAP.TOP_RETURN_X_RIGHT_CYL] == true)
+                    {
+                        RtnTopStep = ReturnTopStep.Idle;
+                    }
+                    break;
+
+            }
+            int step = (int)RtnTopStep;
+            Global.instance.Write_Sequence_Log("RTN_TOP_STEP", step.ToString());
+        }
+        private void TopOutCVLogic()
+        {
+            switch (TopOutCVStep)
+            {
+                case Top_Out_CV.Idle:
+                    
+                    TopOutCVStep = Top_Out_CV.CV_Run_Condtion_Check;
+                    break;
+                case Top_Out_CV.CV_Run_Condtion_Check:
+                    // cv 끝단 clamp없면 cv run 
+                    // Top Clamp도착& Top Hand Up상태이면
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_1] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_2] == false
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_JIG_CV_RUN, true);
+
+                        TopOutCVStep = Top_Out_CV.CV_Stop_Wait;
+                    }
+                    break;
+                case Top_Out_CV.CV_Stop_Wait:
+                    // Clamp  cv 끝에 도착하면 stop
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TOP_JIG_CV_DETECT_2] == true)
+                    {
+                        Dio_Output(DO_MAP.TOP_JIG_CV_RUN, false);
+
+                        TopOutCVStep = Top_Out_CV.Idle;
+                    }
+                    break;
+            }
+            int step = (int)TopOutCVStep;
+            Global.instance.Write_Sequence_Log("TOP_OUT_CV_STEP", step.ToString());
+        }
+        public void LiftLogic()
+        {
+            switch(LiftStep)
+            {
+                case Lift_Step.Idle:
+                    LiftStep = Lift_Step.Clamp_IF_Wait;
+
+                    Global.Mlog.Info($"Lift_Step => Clamp_IF_Wait");
+                    break;
+                case Lift_Step.Clamp_IF_Wait:
+                    // Clamp Interface 기다린다
+                    if (Ez_Model.IsMoveReadyPosY() == true)
+                    {
+                        // Up 1
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_UPPER_INTERFACE] == true
+                            && Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_JIG_OUT_2] != true)
+                        {
+                            SingletonManager.instance.UnLoadStageNo = 0;
+                            if (Ez_Model.MoveMoveLiftInputPos(SingletonManager.instance.UnLoadStageNo) == true)
+                            {
+                                Global.Mlog.Info($"Lift_Step => AGING_CV_1_UPPER_INTERFACE On");
+                                Global.Mlog.Info($"Lift_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                                Global.Mlog.Info($"Lift_Step => Lift Move Upper Position");
+                                Global.Mlog.Info($"Lift_Step => Lift_Input_Move_Donw");
+                                LiftStep = Lift_Step.Lift_Input_Move_Donw;
+                            }
+                        }
+                        // Low1
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_LOW_INTERFACE] == true
+                            && Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_JIG_OUT_2] != true)
+                        {
+                            SingletonManager.instance.UnLoadStageNo = 0;
+                            if (Ez_Model.MoveMoveLiftLowPos(SingletonManager.instance.UnLoadStageNo) == true)
+                            {
+                                Global.Mlog.Info($"Lift_Step => AGING_CV_1_LOW_INTERFACE On");
+                                Global.Mlog.Info($"Lift_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                                Global.Mlog.Info($"Lift_Step => Lift Move Low Position");
+                                Global.Mlog.Info($"Lift_Step => Lift_Input_Move_Donw");
+                                LiftStep = Lift_Step.Lift_Down_Done;
+                            }
+                        }
+                        // Up2
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_UPPER_INTERFACE] == true
+                            && Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_JIG_OUT_2] != true)
+                        {
+                            SingletonManager.instance.UnLoadStageNo = 1;
+                            if (Ez_Model.MoveMoveLiftInputPos(SingletonManager.instance.UnLoadStageNo) == true)
+                            {
+                                Global.Mlog.Info($"Lift_Step => AGING_CV_2_UPPER_INTERFACE On");
+                                Global.Mlog.Info($"Lift_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                                Global.Mlog.Info($"Lift_Step => Lift Move Upper Position");
+                                Global.Mlog.Info($"Lift_Step => Lift_Input_Move_Donw");
+                                LiftStep = Lift_Step.Lift_Input_Move_Donw;
+                            }
+                        }
+                        // Low2
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_LOW_INTERFACE] == true
+                            && Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_JIG_OUT_2] != true)
+                        {
+                            SingletonManager.instance.UnLoadStageNo = 1;
+                            if (Ez_Model.MoveMoveLiftLowPos(SingletonManager.instance.UnLoadStageNo) == true)
+                            {
+                                Global.Mlog.Info($"Lift_Step => AGING_CV_2_LOW_INTERFACE On");
+                                Global.Mlog.Info($"Lift_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                                Global.Mlog.Info($"Lift_Step => Lift Move Low Position");
+                                Global.Mlog.Info($"Lift_Step => Lift_Input_Move_Donw");
+                                LiftStep = Lift_Step.Lift_Down_Done;
+                            }
+                        }
+                        // Up3
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_UPPER_INTERFACE] == true
+                           && Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_JIG_OUT_2] != true)
+                        {
+                            SingletonManager.instance.UnLoadStageNo = 2;
+                            if (Ez_Model.MoveMoveLiftInputPos(SingletonManager.instance.UnLoadStageNo) == true)
+                            {
+                                Global.Mlog.Info($"Lift_Step => AGING_CV_3_UPPER_INTERFACE On");
+                                Global.Mlog.Info($"Lift_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                                Global.Mlog.Info($"Lift_Step => Lift Move Upper Position");
+                                Global.Mlog.Info($"Lift_Step => Lift_Input_Move_Donw");
+                                LiftStep = Lift_Step.Lift_Input_Move_Donw;
+                            }
+                        }
+                        //Low3
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_LOW_INTERFACE] == true
+                            && Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_JIG_OUT_2] != true)
+                        {
+                            SingletonManager.instance.UnLoadStageNo = 2;
+                            if (Ez_Model.MoveMoveLiftLowPos(SingletonManager.instance.UnLoadStageNo) == true)
+                            {
+                                Global.Mlog.Info($"Lift_Step => AGING_CV_3_LOW_INTERFACE On");
+                                Global.Mlog.Info($"Lift_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                                Global.Mlog.Info($"Lift_Step => Lift Move Low Position");
+                                Global.Mlog.Info($"Lift_Step => Lift_Input_Move_Donw");
+                                LiftStep = Lift_Step.Lift_Down_Done;
+                            }
+                        }
+                    }
+                    break;
+                case Lift_Step.Lift_Input_Move_Donw:
+                    if (Ez_Model.IsMoveLiftInputDone(SingletonManager.instance.UnLoadStageNo) == true)
+                    {
+                        Global.Mlog.Info($"Lift_Step => Lift Move Upper Position Done");
+                        Global.Mlog.Info($"Lift_Step => Lift {SingletonManager.instance.UnLoadStageNo.ToString()} CV On");
+                        // Lift CV On
+                        Dio_Output(DO_MAP.LIFT_CV_RUN_1 + SingletonManager.instance.UnLoadStageNo, true);
+
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_UPPER_INTERFACE] == true)
+                        {
+                            Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_INTERFACE_1, true);
+                            Global.Mlog.Info($"Lift_Step => AGING_INVERT_CV_UPPER_INTERFACE_1 On");
+                        }
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_UPPER_INTERFACE] == true)
+                        {
+                            Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_INTERFACE_2, true);
+                            Global.Mlog.Info($"Lift_Step => AGING_INVERT_CV_UPPER_INTERFACE_2 On");
+                        }
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_UPPER_INTERFACE] == true)
+                        {
+                            Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_INTERFACE_3, true);
+                            Global.Mlog.Info($"Lift_Step => AGING_CV_3_UPPER_INTERFACE On");
+                        }
+                        LiftStep = Lift_Step.Lift_CV_Stop;
+                        Global.Mlog.Info($"Lift_Step => Lift_CV_Stop");
+                    }
+                    break;
+                case Lift_Step.Lift_Down_Done:
+                    // 1층도착하였으면 Interface On 하고 CV Run
+                    if (Ez_Model.IsMoveLiftLowDone(SingletonManager.instance.UnLoadStageNo) == true)
+                    {
+                        Global.Mlog.Info($"Lift_Step => Lift Move Low Position Done");
+                        Global.Mlog.Info($"Lift_Step => Lift {SingletonManager.instance.UnLoadStageNo.ToString()} CV On");
+                        // Lift CV On
+                        Dio_Output(DO_MAP.LIFT_CV_RUN_1 + SingletonManager.instance.UnLoadStageNo, true);
+
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_LOW_INTERFACE] == true)
+                        {
+                            Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_INTERFASE_1, true);
+                            Global.Mlog.Info($"Lift_Step => AGING_INVERT_CV_LOW_INTERFASE_1 On");
+                        }
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_LOW_INTERFACE] == true)
+                        {
+                            Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_INTERFASE_2, true);
+                            Global.Mlog.Info($"Lift_Step => AGING_INVERT_CV_LOW_INTERFASE_2 On");
+                        }
+                        else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_LOW_INTERFACE] == true)
+                        {
+                            Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_INTERFASE_3, true);
+                            Global.Mlog.Info($"Lift_Step => AGING_INVERT_CV_LOW_INTERFASE_3 On");
+                        }
+                        LiftStep = Lift_Step.Lift_CV_Stop;
+                        Global.Mlog.Info($"Lift_Step => Lift_CV_Stop");
+                    }
+                    break;
+                case Lift_Step.Lift_CV_Stop:
+                    // Lift CV의 진입 완료신호 받으면 Interface Off  Lift Cv Stop
+                    if (SingletonManager.instance.UnLoadStageNo == (int)Lift_Index.Lift_1)
+                    {
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_JIG_OUT_2] == true)
+                        {
+                            _TimeDelay.Restart();
+                            LiftStep = Lift_Step.Lift_CV_Stop_Wait;
+
+                            Global.Mlog.Info($"Lift_Step => Lift 1 Detect Sensor On");
+                            Global.Mlog.Info($"Lift_Step => Lift_CV_Stop_Wait");
+                        }
+                    }
+                    else if (SingletonManager.instance.UnLoadStageNo == (int)Lift_Index.Lift_2)
+                    {
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_JIG_OUT_2] == true)
+                        {
+                            _TimeDelay.Restart();
+                            LiftStep = Lift_Step.Lift_CV_Stop_Wait;
+                            Global.Mlog.Info($"Lift_Step => Lift 2 Detect Sensor On");
+                            Global.Mlog.Info($"Lift_Step => Lift_CV_Stop_Wait");
+                        }
+                    }
+                    else if (SingletonManager.instance.UnLoadStageNo == (int)Lift_Index.Lift_3)
+                    {
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_JIG_OUT_2] == true)
+                        {
+                            _TimeDelay.Restart();
+                            LiftStep = Lift_Step.Lift_CV_Stop_Wait;
+                            Global.Mlog.Info($"Lift_Step => Lift 3 Detect Sensor On");
+                            Global.Mlog.Info($"Lift_Step => Lift_CV_Stop_Wait");
+                        }
+                    }
+                    break;
+                case Lift_Step.Lift_CV_Stop_Wait:
+                    if (_TimeDelay.ElapsedMilliseconds > 1000)
+                    {
+                        // Lift CV On
+                        Dio_Output(DO_MAP.LIFT_CV_RUN_1 + SingletonManager.instance.UnLoadStageNo, false);
+                        Global.Mlog.Info($"Lift_Step => Lift {(SingletonManager.instance.UnLoadStageNo).ToString()} CV Off");
+                        
+                        LiftStep = Lift_Step.Aging_CV_Stop;
+                        Global.Mlog.Info($"Lift_Step => Aging_CV_Stop");
+                    }
+                    break;
+                case Lift_Step.Aging_CV_Stop:
+                    // Interfa off
+                    Global.Mlog.Info($"Lift_Step => Lift {(SingletonManager.instance.UnLoadStageNo).ToString()} Interface Off");
+                    LiftInterfaceOnOff(SingletonManager.instance.UnLoadStageNo, false);
+
+                    if (Ez_Model.IsMoveLiftLowDone(SingletonManager.instance.UnLoadStageNo) == true)
+                    {
+                        if (SingletonManager.instance.SystemModel.BcrUseNotUse == "Use")
+                        {
+                            LiftStep = Lift_Step.Lift_Low_Move_Upper;
+                            Global.Mlog.Info($"Lift_Step => Lift_Low_Move_Upper");
+                        }
+                        else
+                        {
+                            LiftStep = Lift_Step.Lift_UnlodingPosMove;
+                            Global.Mlog.Info($"Lift_Step => Lift_UnlodingPosMove");
+                        }
+                    }
+                    else
+                    {
+                        Global.Mlog.Info($"Lift_Step => Barcode Use : {SingletonManager.instance.SystemModel.BcrUseNotUse}");
+                        if (SingletonManager.instance.SystemModel.BcrUseNotUse == "Use")
+                        {
+                            LiftStep = Lift_Step.Clamp_BarCode_Read;
+                            Global.Mlog.Info($"Lift_Step => Clamp_BarCode_Read");
+                        }
+                        else
+                        {
+                            LiftStep = Lift_Step.Lift_UnlodingPosMove;
+                            Global.Mlog.Info($"Lift_Step => Lift_UnlodingPosMove");
+                        }
+                    }
+                    break;
+                case Lift_Step.Lift_Low_Move_Upper:
+
+                     Ez_Model.MoveMoveLiftInputPos(SingletonManager.instance.UnLoadStageNo);
+                     LiftStep = Lift_Step.Lift_Low_Move_Upper_Doe;
+                     Global.Mlog.Info($"Lift_Step => Lift_Low_Move_Upper_Doe");
+                    break;
+                case Lift_Step.Lift_Low_Move_Upper_Doe:
+                    if (Ez_Model.IsMoveLiftInputDone(SingletonManager.instance.UnLoadStageNo) == true)
+                    {
+                        Global.Mlog.Info($"Lift_Step => Barcode Use : {SingletonManager.instance.SystemModel.BcrUseNotUse}");
+                        if (SingletonManager.instance.SystemModel.BcrUseNotUse == "Use")
+                        {
+                            LiftStep = Lift_Step.Clamp_BarCode_Read;
+                            Global.Mlog.Info($"Lift_Step => Clamp_BarCode_Read");
+                        }
+                        else
+                        {
+                            LiftStep = Lift_Step.Lift_UnlodingPosMove;
+                            Global.Mlog.Info($"Lift_Step => Next Step : Lift_UnlodingPosMove");
+                        }
+                    }
+                    break;
+                case Lift_Step.Clamp_BarCode_Read:
+
+                    Global.Mlog.Info($"Lift_Step => Barcode Trig Send");
+                    SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].SendBcrTrig();
+                    LiftStep = Lift_Step.Clamp_BarCode_Read_Done;
+                    Global.Mlog.Info($"Lift_Step => Clamp_BarCode_Read_Done");
+                    _TimeDelay.Restart();
+                    break;
+                case Lift_Step.Clamp_BarCode_Read_Done:
+                    if (_TimeDelay.ElapsedMilliseconds < 1000)
+                    {
+                        if (SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].IsBcrReceived == true)
+                        {
+                            Global.Mlog.Info($"Lift_Step => Barcode Read OK");
+                            Global.Mlog.Info($"Lift_Step => Barcode : {SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].Barcode}");
+                            LiftStep = Lift_Step.Clamp_InDate_Read;
+                            Global.Mlog.Info($"Lift_Step => Next Step : Clamp_InDate_Read");
+                        }
+                    }
+                    else
+                    {
+                        Global.Mlog.Info($"Lift_Step => Barcode Read Retry");
+                        LiftStep = Lift_Step.Clamp_BarCode_Read;
+                    }
+                    break;
+                case Lift_Step.Clamp_InDate_Read:
+                    if (SingletonManager.instance.IsTcpConnected == true)
+                    {
+                        Global.Mlog.Info($"Lift_Step => TCP Barcode Send");
+                        string barcode = SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].Barcode;
+                        SingletonManager.instance.TcpClient.TcpSendMessage(barcode);
+                        LiftStep = Lift_Step.Clamp_InDate_Waite;
+
+                        SingletonManager.instance.Channel_Model[SingletonManager.instance.UnLoadStageNo].Barcode = barcode;
+                        Global.Mlog.Info($"Lift_Step => Next Step : Clamp_InDate_Waite");
+                        _TimeDelay.Restart();
+                    }
+                    break;
+                case Lift_Step.Clamp_InDate_Waite:
+                    if (_TimeDelay.ElapsedMilliseconds < 1000)
+                    {
+                        if (SingletonManager.instance.TcpClient.TcpReceiveData != "")
+                        {
+                            SingletonManager.instance.Channel_Model[SingletonManager.instance.UnLoadStageNo].Barcode += (" : " + SingletonManager.instance.TcpClient.TcpReceiveData);
+                            LiftStep = Lift_Step.Aging_Time_Check;
+                            Global.Mlog.Info($"Lift_Step => Next Step : Aging_Time_Check");
+                        }
+                    }
+                    else
+                    {
+                        LiftStep = Lift_Step.Clamp_InDate_Read;
+                    }
+                    break;
+                case Lift_Step.Aging_Time_Check:
+                    if (SingletonManager.instance.AgingModel.AgingTimeCheck(SingletonManager.instance.UnLoadStageNo) == true)
+                    {
+                        LiftStep = Lift_Step.Lift_UnlodingPosMove;
+                        Global.Mlog.Info($"Lift_Step => Lift_UnlodingPosMove");
+                    }
+                    else
+                    {
+                        _TimeDelay.Restart();
+                        LiftStep = Lift_Step.Aging_Time_Check_Wait;
+                        Global.Mlog.Info($"Lift_Step => Aging_Time_Check_Wait");
+                    }
+                    break;
+                case Lift_Step.Aging_Time_Check_Wait:
+                    if (_TimeDelay.ElapsedMilliseconds > 60000)
+                    {
+                        LiftStep = Lift_Step.Clamp_BarCode_Read;
+                    }
+                    break;
+                case Lift_Step.Lift_UnlodingPosMove:
+                    
+                    ///if (Ez_Model.IsMoveReadyPosY() == true)
+                    {
+                        //Global.Mlog.Info($"Lift_Step => IsMoveReadyPosY Done");
+                        // Lift가 이미 Unloading 위치로 이동
+                        if (Ez_Model.MoveMoveLiftUnloadingPos(SingletonManager.instance.UnLoadStageNo) == true)
+                        {
+                            Global.Mlog.Info($"Lift_Step => Lift {(SingletonManager.instance.UnLoadStageNo).ToString()} Move Loding Position");
+                            LiftStep = Lift_Step.Lift_UnlodingPos_Done;
+                            Global.Mlog.Info($"Lift_Step => Lift_UnlodingPos_Done");
+                        }
+                    }
+                    break;
+                case Lift_Step.Lift_UnlodingPos_Done:
+                    // Lift 2층 도착 확인한다.
+                    if (Ez_Model.IsMoveLiftUnloadingDone(SingletonManager.instance.UnLoadStageNo) == true)
+                    {
+                        Global.Mlog.Info($"Lift_Step => IsMoveLiftUnloadingDone Done");
+                        SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] = (int)Floor_Index.Max;
+                        for (int i = 0; i < (int)Floor_Index.Max; i++)
+                            SingletonManager.instance.Display_Lift[SingletonManager.instance.UnLoadStageNo].Floor[i] = true;
+                        LiftStep = Lift_Step.Idle;
+                        Global.Mlog.Info($"Lift_Step => Idle");
+                    }
+                    break;
+                
+            }
+            int step = (int)LiftStep;
+            Global.instance.Write_Sequence_Log("LIFT_STEP", step.ToString());
+            Global.instance.Write_Sequence_Log("LIFT_STAGE", SingletonManager.instance.UnLoadStageNo.ToString());
+
+        }
+        private void UnClampCvLogic()
+        {
+            switch(UnClampCvStep)
+            {
+                case UnClamp_CV_Step.Idle:
+                    UnClampCvStep = UnClamp_CV_Step.CV_Run;
+                    break;
+                case UnClamp_CV_Step.CV_Run:
+                    // 제품 없으면 cv run
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == false
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_CENTERING_BWD_CYL] == true)
+                    {
+                        Dio_Output(DO_MAP.UNCLAMP_CV_RUN, true);
+
+                        UnClampCvStep = UnClamp_CV_Step.CV_Stop;
+                    }
+                    else if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == false
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_CENTERING_BWD_CYL] != true)
+                    {
+                        Dio_Output(DO_MAP.UNCLAMP_CV_CENTERING, false);
+                    }
+                    break;
+                case UnClamp_CV_Step.CV_Stop:
+                    // 도착 센서가 들어오면 cv stop하고 centering전진
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == true)
+                    {
+                        _TimeDelay.Restart();
+                        UnClampCvStep = UnClamp_CV_Step.CV_Stop_Wait;
+                    }
+                    break;
+                case UnClamp_CV_Step.CV_Stop_Wait:
+                    if (_TimeDelay.ElapsedMilliseconds > 1000)
+                    {
+                        Dio_Output(DO_MAP.UNCLAMP_CV_RUN, false);
+
+                        UnClampCvStep = UnClamp_CV_Step.Idle;
+                    }
+                    break;
+            }
+            int step = (int)UnClampCvStep;
+            Global.instance.Write_Sequence_Log("UNCLAMP_CV_STEP", step.ToString());
+        }
+        public void UnlodingCvLogic()
+        {
+            switch (UnloadCvStep)
+            {
+                case Unload_CV_Step.Idle:
+                    UnloadCvStep = Unload_CV_Step.CV_Run;
+                    break;
+                case Unload_CV_Step.CV_Run:
+                    // In X가 Right위치에서 Down상태가 아니면
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_UP] == true)
+                    {
+                        // Unclamp cv 제품 있고 CV end 에 제품없으면 run
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == false
+                            //&& Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == true
+                            || Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_END] == false)
+                            //&& (Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_FIRST] == true || Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_MID] == true))
+                        {
+                            Dio_Output(DO_MAP.INPUT_LEFT_SET_CV_RUN, true);
+                            UnloadCvStep = Unload_CV_Step.CV_Stop;
+                        }
+                    }
+                    break;
+                case Unload_CV_Step.CV_Stop:
+                    // unclamp cv에 제품이 있으고 & cv end 신호가 들어오면 stop
+                    // X Right위치에서 Down상태이면 stop
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNCLAMP_CV_DETECT] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_END] == true)
+                    {
+                        Dio_Output(DO_MAP.INPUT_LEFT_SET_CV_RUN, false);
+                        UnloadCvStep = Unload_CV_Step.Idle;
+                    }
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT] == true
+                        && Dio.DO_RAW_DATA[(int)DO_MAP.UNLOAD_Z_DOWN] == true)
+                    {
+                        Dio_Output(DO_MAP.INPUT_LEFT_SET_CV_RUN, false);
+                        UnloadCvStep = Unload_CV_Step.Idle;
+                    }
+                    break;
+            }
+            int step = (int)UnloadCvStep;
+            Global.instance.Write_Sequence_Log("UNLOAD_CV_STEP", step.ToString());
+        }
+        private void UnloadXLogic()
+        {
+            switch(UnloadXlStep)
+            {
+                case Unload_X_Step.Idle:
+                    // right위치가 이니고 Up되여 있지 않으면 UP하고 rightr오 리동 시킨다
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_DOWN] == true)
+                        Dio_Output(DO_MAP.UNLOAD_Z_DOWN, false);
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_LEFT] == true)
+                        Dio_Output(DO_MAP.UNLOAD_X_FWD, false);
+                    UnloadXlStep = Unload_X_Step.Left_Move;
+                    break;
+                case Unload_X_Step.Left_Move:
+                    // clamp도착이 센서가 들어오고
+                    // y hand가  Ready위치 이거나 Lift 1,2,3 에 있으면 Left 이동
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_BUFFER] == true
+                        && Ez_Model.IsUnloadSafetyPosY() == true
+                         && UnloadYPutDownMoving == false)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_X_FWD, true);
+                        UnloadXlStep = Unload_X_Step.Left_Check;
+                    }
+                    else if (SingletonManager.instance.EquipmentMode == EquipmentMode.Dry
+                        && Ez_Model.IsUnloadSafetyPosY() == true
+                        && UnloadYPutDownMoving == false)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_X_FWD, true);
+                        UnloadXlStep = Unload_X_Step.Left_Check;
+                    }
+                    break;
+                case Unload_X_Step.Left_Check:
+                    // Left도착후 Down
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_LEFT] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_Z_DOWN, true);
+
+                        UnloadXlStep = Unload_X_Step.Left_Down_Check;
+                    }
+                    break;
+                case Unload_X_Step.Left_Down_Check:
+                    // Down완료후 Grip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_DOWN] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_Z_GRIP, true);
+
+                        UnloadXlStep = Unload_X_Step.Left_Grip_Check;
+                    }
+                    break;
+                case Unload_X_Step.Left_Grip_Check:
+                    // Grip 완료 후 up
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_GRIP] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_Z_DOWN, false);
+                        UnloadXlStep = Unload_X_Step.Left_Up_Check;
+                    }
+                    break;
+                case Unload_X_Step.Left_Up_Check:
+                    // Up완료 후 Right 이동
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_UP] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_X_FWD, false);
+                        UnloadXlStep = Unload_X_Step.Right_Check;
+                    }
+                    break;
+                case Unload_X_Step.Right_Check:
+                    //Right 도착 후 CV putdown위치 제품 없으면 Down
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_FIRST] == false
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.IN_CV_DETECT_MID] == false)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_Z_DOWN, true);
+                        UnloadXlStep = Unload_X_Step.Right_Down_Check;
+                    }
+                    break;
+                case Unload_X_Step.Right_Down_Check:
+                    // down 확인 후 ungrip
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_DOWN] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_Z_GRIP, false);
+                        UnloadXlStep = Unload_X_Step.Right_UnGrip_Check;
+                    }
+                    break;
+                case Unload_X_Step.Right_UnGrip_Check:
+                    // ungrip확인 후 up
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_UNGRIP] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_Z_DOWN, false);
+                        UnloadXlStep = Unload_X_Step.Right_Up_Check;
+                    }
+                    break;
+                case Unload_X_Step.Right_Up_Check:
+                    // u
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_Z_UP] == true)
+                        UnloadXlStep = Unload_X_Step.Idle;
+                    break;
+            }
+            int step = (int)UnloadXlStep;
+            Global.instance.Write_Sequence_Log("UNLOAD_X_STEP", step.ToString());
+        }
+        private void UnloadYHandlerLogic()
+        {
+            switch(UnloadYStep)
+            {
+                case Unload_Y_Step.Idle:
+                    // Z ready 위치가 아니면 ready로 이동시킨다
+                    if (Ez_Model.IsMoveReadyPosZ() == false)
+                        Ez_Model.MoveReadyPosZ();
+                    UnloadYStep = Unload_Y_Step.Z_Ready_Check;
+                    break;
+                case Unload_Y_Step.Z_Ready_Check:
+                    if (Ez_Model.IsMoveReadyPosZ() == true)
+                    {
+                        Global.Mlog.Info($"Unload_Y_Step => IsMoveReadyPosZ Done");
+                        Global.Mlog.Info($"Unload_Y_Step => PickUp_Stage_Check");
+                        UnloadYStep = Unload_Y_Step.PickUp_Stage_Check;
+                    }
+                    break;
+                case Unload_Y_Step.PickUp_Stage_Check:
+                    // Pickup 중이면 작업 이어서 진행
+                    if (SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] > 0)
+                    {
+                        Global.Mlog.Info($"Unload_Y_Step => {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                        Global.Mlog.Info($"Unload_Y_Step => {SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo].ToString()}");
+                        Global.Mlog.Info($"Unload_Y_Step => MovePickUpPosY");
+                        Ez_Model.MovePickUpPosY(SingletonManager.instance.UnLoadStageNo);
+                        UnloadYStep = Unload_Y_Step.Move_Y_PickUp_Done;
+
+                        Global.Mlog.Info($"Unload_Y_Step => Move_Y_PickUp_Done");
+                    }
+                    if (SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] == 0
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_BUFFER] == true)
+                    {
+                        // UI 변수 초기화
+                        SingletonManager.instance.Channel_Model[SingletonManager.instance.UnLoadStageNo].Barcode = string.Empty;
+
+                        Ez_Model.MovePickUpPosY(2);
+                        UnloadYStep = Unload_Y_Step.Move_X_Pickup_Wait;
+                    }
+                    // Pickup완료 하였으면 다음 stage 확인
+                    else if (SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] == 0
                         && SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
                     {
-                        // Out Handle X축 Pickup위치로 이동
-                        if (MoveOutHandlerPickUpY() == true)
-                            Out_Handle_Step = OutHandle.Out_Handle_X_Pickup_Pos_Check;
+                        SingletonManager.instance.UnLoadStageNo += 1;
+                        // 3번 stage까지 확인하고 다시 1번으로 넘어간다.
+                        if (SingletonManager.instance.UnLoadStageNo == 3)
+                            SingletonManager.instance.UnLoadStageNo = 0;
+                         SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] = (int)Floor_Index.Max;
+                            for (int i = 0; i < (int)Floor_Index.Max; i++)
+                                SingletonManager.instance.Display_Lift[SingletonManager.instance.UnLoadStageNo].Floor[i] = true;
+
+                        UnloadYPutDownMoving = false;
+                        UnloadYStep = Unload_Y_Step.Idle;
+                    }
+                        
+                    // 전체 stage에 제품이 없으면 ready 위치도 이동후 다시 돌알아와서 Stage 체크한다
+                    // 이미 Ready 위치에 있으면 Idle로 다시 보낸다
+                    //UnloadYStep = Unload_Y_Step.Move_Y_Ready_Check;
+                    break;
+                case Unload_Y_Step.Move_X_Pickup_Wait:
+                    if (Ez_Model.IsMovePickUpPosY(2)== true)
+                    {
+                        UnloadYPutDownMoving = false;
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT] == true
+                        && Dio.DO_RAW_DATA[(int)DO_MAP.UNLOAD_X_FWD] != true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_BUFFER] == false
+                        )
+                        {
+                            Ez_Model.MoveReadyPosY();
+                            UnloadYStep = Unload_Y_Step.Move_Y_Ready_Done;
+                        }
                     }
                     break;
-                case OutHandle.Out_Handle_X_Pickup_Pos_Check:
-                    // Out Handle Pickup위치 도착완료하면 z Down 한다.
-                    if (IsOutHandlerPickupPosY() == true)
+                case Unload_Y_Step.Move_Y_Ready_Done:
+                    if (Ez_Model.IsMoveReadyPosY() == true)
                     {
-                        // Top Clamping 완료 위치 제품있는지 확인 
-                        if ((Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_1] == true
-                            && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_DETECT_SS_2] == true)
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT] == true
+                        && Dio.DO_RAW_DATA[(int)DO_MAP.UNLOAD_X_FWD] != true)
+                        {
+                            UnloadYStep = Unload_Y_Step.Idle;
+                        }
+                    }
+                    break;
+                case Unload_Y_Step.Move_Y_PickUp_Done:
+                    // 픽업위치 도착하면 Z pickup이동
+                    if (Ez_Model.IsMovePickUpPosY(SingletonManager.instance.UnLoadStageNo) ==true)
+                    {
+                        Global.Mlog.Info($"Unload_Y_Step => Lift {SingletonManager.instance.UnLoadStageNo.ToString()}");
+                        Global.Mlog.Info($"Unload_Y_Step => IsMovePickUpPosY Done");
+                        UnloadYPutDownMoving = false;
+                        Global.Mlog.Info($"Unload_Y_Step => UnloadYPutDownMoving : {UnloadYPutDownMoving.ToString()}");
+
+                        Ez_Model.MovePickUpPosZ();
+                        UnloadYStep = Unload_Y_Step.Move_Z_PickUp_Down_Done;
+
+                        Global.Mlog.Info($"Unload_Y_Step => MovePickUpPosZ");
+                        Global.Mlog.Info($"Unload_Y_Step => Move_Z_PickUp_Down_Done");
+                    }
+                    break;
+                case Unload_Y_Step.Move_Z_PickUp_Down_Done:
+                    if (Ez_Model.IsMovePickUpPosZ()==true)
+                    {
+                        Global.Mlog.Info($"Unload_Y_Step => IsMovePickUpPosZ Done");
+                        Global.Mlog.Info($"Unload_Y_Step => UNLOAD_LD_Z_GRIP_DETECT(DI) : {Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_GRIP_DETECT].ToString()}");
+                        if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_GRIP_DETECT] == true
                             || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
                         {
-                            // Out Handle Z down
-                            MoveOutHandlerPickUpZ();
-                            Out_Handle_Step = OutHandle.Out_Handle_Z_Down_Done;
-
-                            Dio_Output(DO_MAP.CLAMPING_CV_CENTERING_SOL_1, false);
-                            Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, false); // stopper down
-                        }
-                    }
-                    break;
-                case OutHandle.Out_Handle_Z_Down_Done:
-                    // Out Handle Z down 완료하면 Grip lock
-                    if (IsOutHandlerPickUpZ() == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_STOPER_UP_CYL_SS] == false
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_CENTERING_CYL_SS_1_BWD] == true) 
-                    {
-                        // Out Handle Grip Lock
-                        Dio_Output(DO_MAP.CLAMPING_LD_Z_GRIP_SOL, true);
-                        Out_Handle_Step = OutHandle.Out_Handle_Grip_Check;
-                    }
-                    break;
-                case OutHandle.Out_Handle_Grip_Check:
-                    // Grip lock완료하면 Z up
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMP_LD_Z_GRIP_CYL_SS] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.CLAMPING_CV_STOPER_UP_CYL_SS] == false)
-                    {
-                        // Out Handle Z up
-                        MoveOutHandlerRadyZ();
-                        Dio_Output(DO_MAP.CLAMPING_CV_STOPER_UP_SOL, true);
-                        Out_Handle_Step = OutHandle.Out_Handle_Z_Pickup_Up_Done;
-                    }
-                    break;
-                case OutHandle.Out_Handle_Z_Pickup_Up_Done:
-                    // Z up완료 후 X PutDown위치 이동
-                    if (IsOutHandlerReadyDoneZ() == true)
-                    {
-                        // Out Handle X PutDown위치로 이동
-                        if (MoveOutHandlerPutDownX() == true)
-                            Out_Handle_Step = OutHandle.Out_Handle_X_PutDown_Pos_Check;
-                    }
-                    break;
-                case OutHandle.Out_Handle_X_PutDown_Pos_Check:
-                    // X Putdown위치 도착하면 기록한 층수위에 안착한다.
-                    // 안착 포지션은 1,2,3 순으로 놓는다
-                    if (IsOutHandlerXPutDownPos() == true)
-                    {
-                        SingletonManager.instance.IsY_PickupColl = false;
-                        // Out Handle Z down
-                        if (MoveOutHandlerPutDownZ() == true)
-                            Out_Handle_Step = OutHandle.Out_Handle_Z_PutDown_Done;
-                    }
-                    break;
-                case OutHandle.Out_Handle_Z_PutDown_Done:
-                    // Z Down완료 후 Ungrip
-                    if (IsOutHandlerPutDownDoneZ() == true)
-                    {
-                        // Out Handle UnGrip 
-                        Dio_Output(DO_MAP.CLAMPING_LD_Z_GRIP_SOL, false);
-                        Out_Handle_Step = OutHandle.Out_Handle_UnGrip_Check;
-                    }
-                    break;
-                case OutHandle.Out_Handle_UnGrip_Check:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.CLAMP_LD_Z_UNGRIP_CYL_SS] == true)
-                    {
-                        MoveOutHandlerRadyZ();
-                        Out_Handle_Step = OutHandle.Out_Handle_Z_Ready_Check;
-                    }
-                    break;
-                case OutHandle.Out_Handle_Z_Ready_Check:
-                    if (IsOutHandlerReadyDoneZ() == true)
-                    {
-                        // 적제 단수 증가
-                        SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo] += 1;
-                        if (SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo] >= (int)Floor_Index.Max)
-                        {
-                            // 7단 적제 완료 후 초기화
-                            if (SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
-                                SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo] = 0;
-
-                            // 적제 완료 했으면 Complete 상태 변경한다. false 원복은 Aging C/V에 배출 후 변경한다.
-                            SingletonManager.instance.LoadComplete[SingletonManager.instance.LoadStageNo] = true;
-
-                            // 7단 적제 완료하면 다음 Load 위치로 설정
-                            SingletonManager.instance.LoadStageNo += 1;
-                            if (SingletonManager.instance.LoadStageNo >= (int)Lift_Index.Max)
-                                SingletonManager.instance.LoadStageNo = 0;
-                            
-                        }
-                        Out_Handle_Step = OutHandle.Idle;
-                    }
-                    break;
-            }
-            int step = (int)Out_Handle_Step;
-            Global.instance.Write_Sequence_Log("OUT_HANDLER_STEP", step.ToString());
-            Global.instance.Write_Sequence_Log("OUT_LOAD_FLOOR", SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo].ToString());
-            Global.instance.Write_Sequence_Log("OUT_LOAD_STAGE", SingletonManager.instance.LoadStageNo.ToString());
-        }
-        private void Aging_CV_Logic(int Index)
-        {
-            switch(AgingCVStep[Index])
-            {
-                case Aging_CV_Step.Idle:
-                    // 변수 초기화
-                    AgingCvFull[Index] = false;
-                    AgingCvStart[Index] = false;
-                    AgingCvEndStopCondition[Index] = false;
-                    AgingCvInStopCondition[Index] = false;
-
-                    AgingCVStep[Index] = Aging_CV_Step.CV_On_Condition_Wait;
-                    break;
-                case Aging_CV_Step.CV_On_Condition_Wait:
-                    int LiftNO = 0;
-                    if (Index == 0 || Index == 3) LiftNO = 0;
-                    if (Index == 1 || Index == 4) LiftNO = 1;
-                    if (Index == 2 || Index == 5) LiftNO = 2;
-                    if (SingletonManager.instance.LoadComplete[LiftNO] == true)
-                    {
-                        SingletonManager.instance.LoadComplete[LiftNO] = false;
-                        GetAgingCVStartEndSS(Index);
-                        // Upper
-                        if (Index < 3)
-                        {
-                            if (AgingCvFull[Index] == true)
-                            {
-                                // Unclamping IF on step 이동
-                                AgingCVStep[Index] = Aging_CV_Step.Unclamping_IF_Send;
-                            }
-                            else
-                            {
-                                // CV 전진 step 이동
-                                AgingCVStep[Index] = Aging_CV_Step.Lift_CV_Forward;
-                            }
-                        }
-                        // Low
-                        else
-                        {
-                            // Lift Down Step으로 이동
-                            if (LiftLowMoveConditon(Index) == true)
-                            {
-                                MoveLiftDown(Index);
-                                AgingCVStep[Index] = Aging_CV_Step.Low_Lift_Down;
-                            }
-                        }
-                    }
-                    break;
-                case Aging_CV_Step.Low_Lift_Down:
-                    if (IsMoveLiftDownDone(Index) == true)
-                    {
-                        if (AgingCvFull[Index] == true)
-                        {
-                            AgingCVStep[Index] = Aging_CV_Step.Unclamping_IF_Send;
+                            Global.Mlog.Info($"Unload_Y_Step => Grip");
+                            Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, true);
+                            UnloadYStep = Unload_Y_Step.Grip_Check;
                         }
                         else
                         {
-                            AgingCVStep[Index] = Aging_CV_Step.Lift_CV_Forward;
+                            SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] -= 1;
+                            int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo];
+                            SingletonManager.instance.Display_Lift[SingletonManager.instance.UnLoadStageNo].Floor[floor] = false;
+                            UnloadYStep = Unload_Y_Step.Move_Y_PickUp_Done;
+
+                            Global.Mlog.Info($"Unload_Y_Step => Next Floor : {floor.ToString()}");
                         }
                     }
-
                     break;
-                case Aging_CV_Step.Unclamping_IF_Send:
-
-                    SetUnclampInterfase(Index, true);
-
-                    AgingCVStep[Index] = Aging_CV_Step.Unclamping_IF_Receive;
-                    break;
-                case Aging_CV_Step.Unclamping_IF_Receive:
-                    
-                    if (UnclampInterfaseReturnOn(Index) == true)
-                        AgingCVStep[Index] = Aging_CV_Step.Lift_CV_Forward;
-
-                    break;
-                case Aging_CV_Step.Lift_CV_Forward:
-                    if (Index == 0 || Index == 3)
-                        Dio_Output(DO_MAP.LIFT_CV_RUN_1, true);
-                    if (Index == 1 || Index == 4)
-                        Dio_Output(DO_MAP.LIFT_CV_RUN_2, true);
-                    if (Index == 2 || Index == 5)
-                        Dio_Output(DO_MAP.LIFT_CV_RUN_3, true);
-
-                    AgingCVStep[Index] = Aging_CV_Step.Aging_CV_Forward;
-                    break;
-                case Aging_CV_Step.Aging_CV_Forward:
-                    /*
-                    //int Lift_CV_IO = 0;
-                    //if (Index == 0 || Index == 3)
-                    //    Lift_CV_IO = (int)DO_MAP.LIFT_CV_RUN_1;
-                    //if (Index == 1 || Index == 4)
-                    //    Lift_CV_IO = (int)DO_MAP.LIFT_CV_RUN_2;
-                    //if (Index == 2 || Index == 5)
-                    //    Lift_CV_IO = (int)DO_MAP.LIFT_CV_RUN_3;
-
-                    //if (Dio.DO_RAW_DATA[Lift_CV_IO] == false)
-                    //    AgingCVStep[Index] = Aging_CV_Step.Lift_CV_Forward;
-                    */
-                    int Lift_CV_Out_IO = 0;
-                    if (Index == 0 || Index == 3)
-                        Lift_CV_Out_IO = (int)DI_MAP.LIFT_1_CV_DETECT_OUT_SS_2;
-                    if (Index == 1 || Index == 4)
-                        Lift_CV_Out_IO = (int)DI_MAP.LIFT_2_CV_DETECT_OUT_SS_2;
-                    if (Index == 2 || Index == 5)
-                        Lift_CV_Out_IO = (int)DI_MAP.LIFT_3_CV_DETECT_OUT_SS_2;
-                    // Lift CV out sensor check
-                    if (Dio.DI_RAW_DATA[Lift_CV_Out_IO] == true)
+                case Unload_Y_Step.Grip_Check:
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_GRIP_CYL] == true)
                     {
-                        // Aging CV Run
-                        Dio_Aging_CV_Control(Index, true);
-                        AgingCVStep[Index] = Aging_CV_Step.CV_Stop;
+                        Ez_Model.MoveReadyPosZ();
+                        UnloadYStep = Unload_Y_Step.Move_Z_Ready_Done;
+
+                        Global.Mlog.Info($"Unload_Y_Step => MoveReadyPosZ");
+                        Global.Mlog.Info($"Unload_Y_Step => Move_Z_Ready_Done");
                     }
                     break;
-                case Aging_CV_Step.CV_Stop:
-
-                    // aging CV start End Sensor 체크
-                    GetAgingCVStartEndSS(Index);
-
-                    if (Index == 0 || Index == 3) LiftNO = 0;
-                    if (Index == 1 || Index == 4) LiftNO = 1;
-                    if (Index == 2 || Index == 5) LiftNO = 2;
-
-                    // Clamp 한번이라도 감지않되면 
-                    if (AgingCvFull[Index] == false)
-                        AgingCvEndStopCondition[Index] = true;
-                    if (AgingCvStart[Index] == false)
-                        AgingCvInStopCondition[Index] = true;
-
-                    // Aging CV 배출 끝단 센서가 한번꺼졌다가 다시 들어오면
-                    // **** CV 끝단 센서를 최대한 끝으로 달아야한다.*****
-                    if (AgingCvFull[Index] == true && AgingCvEndStopCondition[Index] == true)
+                case Unload_Y_Step.Move_Z_Ready_Done:
+                    // Z Up완료 후 Pudown위치에 clamp가 없고 RIGHT위치에 있으면 Y putdown위치 이동
+                    if (Ez_Model.IsMoveReadyPosZ() == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_BUFFER] != true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT] == true
+                        && Dio.DO_RAW_DATA[(int)DO_MAP.UNLOAD_X_FWD] != true)
                     {
-                        // Aging CV Stop
-                        Dio_Aging_CV_Control(Index, false);
+                        Global.Mlog.Info($"Unload_Y_Step => IsMoveReadyPosZ Done");
+                        Global.Mlog.Info($"Unload_Y_Step => UNLOAD_BUFFER(X4E) : {Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_BUFFER].ToString()}");
+                        Global.Mlog.Info($"Unload_Y_Step => UNLOAD_X_RIGHT(X49) : {Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_X_RIGHT].ToString()}");
+                        Global.Mlog.Info($"Unload_Y_Step => UNLOAD_X_FWD(Y27) : {Dio.DO_RAW_DATA[(int)DO_MAP.UNLOAD_X_FWD].ToString()}");
 
-                        if (Index == 0 || Index == 1)
-                            Dio_Output(DO_MAP.LIFT_CV_RUN_1, false);
-                        if (Index == 2 || Index == 3)
-                            Dio_Output(DO_MAP.LIFT_CV_RUN_2, false);
-                        if (Index == 4 || Index == 5)
-                            Dio_Output(DO_MAP.LIFT_CV_RUN_3, false);
-                        AgingCVStep[Index] = Aging_CV_Step.Unclamping_IF_Set_Off;
+                        Ez_Model.MovePutDownPosY();
+                        UnloadYPutDownMoving = true;
+                        UnloadYStep = Unload_Y_Step.Move_Y_PutDown_Done;
 
-                        int Lift_NO = 0;
-                        if (Index == 0 || Index == 3) Lift_NO = 0;
-                        if (Index == 1 || Index == 4) Lift_NO = 1;
-                        if (Index == 2 || Index == 5) Lift_NO = 2;
-                        SingletonManager.instance.LoadFloor[Lift_NO] = 0;
-                    }
-                    // Aging CV 진입구가 센서가 한번꺼졌다가 다시 들어오면
-                    else if (AgingCvStart[Index] == true && AgingCvInStopCondition[Index] == true)
-                    {
-                        // Aging CV Stop
-                        Dio_Aging_CV_Control(Index, false);
-
-                        if (Index == 0 || Index == 3)
-                            Dio_Output(DO_MAP.LIFT_CV_RUN_1, false);
-                        if (Index == 1 || Index == 4)
-                            Dio_Output(DO_MAP.LIFT_CV_RUN_2, false);
-                        if (Index == 2 || Index == 5)
-                            Dio_Output(DO_MAP.LIFT_CV_RUN_3, false);
-                        AgingCVStep[Index] = Aging_CV_Step.Unclamping_IF_Set_Off;
-
-                        int Lift_NO = 0;
-                        if (Index == 0 || Index == 3) Lift_NO = 0;
-                        if (Index == 1 || Index == 4) Lift_NO = 1;
-                        if (Index == 2 || Index == 5) Lift_NO = 2;
-                        SingletonManager.instance.LoadFloor[Lift_NO] = 0;
+                        Global.Mlog.Info($"Unload_Y_Step => MovePutDownPosY");
+                        Global.Mlog.Info($"Unload_Y_Step => UnloadYPutDownMoving : true");
+                        Global.Mlog.Info($"Unload_Y_Step => Move_Y_PutDown_Done");
                     }
                     break;
-                case Aging_CV_Step.Unclamping_IF_Set_Off:
-                    if (GetUnclampInterfaseOff(Index) == true)
+                case Unload_Y_Step.Move_Y_PutDown_Done:
+                    if (Ez_Model.IsMovePutDownPosY() == true)
                     {
-                        SetUnclampInterfase(Index, false);
-                        // 1층이면 Lift Up을 한다.
-                        if (Index == 3 || Index == 4 || Index == 5)
-                            AgingCVStep[Index] = Aging_CV_Step.Low_Lift_Up_Start;
-                        else
-                            AgingCVStep[Index] = Aging_CV_Step.Idle;
-                    }
-                    break;
-                case Aging_CV_Step.Low_Lift_Up_Start:
-                    if (LiftLowMoveConditon(Index) == true)
-                    {
-                        MoveLiftUp(Index);
-                        AgingCVStep[Index] = Aging_CV_Step.Low_Lift_Up_Wait;
-                    }
-                    break;
-                case Aging_CV_Step.Low_Lift_Up_Wait:
-                    if (IsMoveLiftUpDone(Index)==true)
-                        AgingCVStep[Index] = Aging_CV_Step.Idle;
-                    break;
-                
-            }
-        }
-        #region // Motion Control
-        private bool MoveOutHandlerPickUpY()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Y_Handler_Pick_Up).ToString()];
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("OUT_Y_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Out_Y_Handler_Y), pos);
-        }
-        private bool IsOutHandlerPickupPosY()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Y_Handler_Pick_Up).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Y_Handler_Y)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveOutHandlerPutDownX()
-        {
-            double pos = GetOutX_PutDownMovePosition();
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("OUT_Y_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Out_Y_Handler_Y), pos);
-        }
-        private bool IsOutHandlerXPutDownPos()
-        {
-            double pos = GetOutX_PutDownMovePosition();
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Y_Handler_Y)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveOutHandlerPickUpZ()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Z_Handler_Pick_Up).ToString()];
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("OUT_Z_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Out_Z_Handler_Z), pos);
-        }
-        private bool IsOutHandlerPickUpZ()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Z_Handler_Pick_Up).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Z_Handler_Z)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveOutHandlerRadyZ()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Z_Handler_Home).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("OUT_Z_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Out_Z_Handler_Z), pos);
-        }
-        private bool IsOutHandlerReadyDoneZ()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Z_Handler_Home).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Z_Handler_Z)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveOutHandlerPutDownZ()
-        {
-            double pos = GetOutZ_PutDownFloorPos();
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("OUT_Y_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Out_Z_Handler_Z), pos);
-        }
-        private bool IsOutHandlerPutDownDoneZ()
-        {
-            double pos = GetOutZ_PutDownFloorPos();
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos,2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Z_Handler_Z)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool IsOutHandlerSaftyInterlockY()
-        {
-            double pos1, pos2, pos3;
-            pos1 = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Y_Handler_Put_Down_1).ToString()];
-            pos1 = Math.Round(pos1, 2);
-            pos2 = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Y_Handler_Put_Down_2).ToString()];
-            pos2 = Math.Round(pos2, 2);
-            pos3 = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Y_Handler_Put_Down_3).ToString()];
-            pos3 = Math.Round(pos3, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Y_Handler_Y)), 2);
-            
-            if (GetPos == pos1 || GetPos == pos2 || GetPos == pos3)
-                return true;
-            return false;
-        }
-        private double GetOutZ_PutDownFloorPos()
-        {
-            double pos = 0.0;
-            //double NowPos = SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Handler_X));
-            //if (SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_1).ToString()] == NowPos)
-            //{
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_Z_Put_Down_1 + LoadFloor[(int)Lift_Index.Lift_1]).ToString()];
-            //}
-            //else if (SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_2).ToString()] == NowPos)
-            //{
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_Z_Put_Down_2 + LoadFloor[(int)Lift_Index.Lift_2]).ToString()];
-            //}
-            //else if (SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_3).ToString()] == NowPos)
-            //{
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_Z_Put_Down_3 + LoadFloor[(int)Lift_Index.Lift_3]).ToString()];
-            //}
-            pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Z_Handler_Put_Down_1 + SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo]).ToString()];
-            pos = Math.Round(pos, 2);
-            return pos;
-        }
-        private double GetOutX_PutDownMovePosition()
-        {
-            double pos = 0.0;
-            // Lift 1,2,3 순서로 Load 한다.
-            pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Y_Handler_Put_Down_1 + SingletonManager.instance.LoadStageNo).ToString()];
-            pos = Math.Round(pos, 2);
-            // 1번 Lift: tray가 있으면 아직 max층이 아니면 이어서 올린다.
-            // 또는 비었있으면 1층부터 시작한다
-            //if ((Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_CV_DETECT_IN_SS_1] == true
-            //    && LoadFloor[(int)Lift_Index.Lift_1] > (int)Floor_Index.Max)
-            //    || Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_CV_DETECT_IN_SS_1] != true)
-            //{
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_1).ToString()];
-            //}
-            //else if ((Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_CV_DETECT_IN_SS_1] == true
-            //    && LoadFloor[(int)Lift_Index.Lift_2] > (int)Floor_Index.Max)
-            //    || Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_CV_DETECT_IN_SS_1] != true)
-            //{
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_2).ToString()];
-            //}
-            //else if ((Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_CV_DETECT_IN_SS_1] == true
-            //    && LoadFloor[(int)Lift_Index.Lift_3] > (int)Floor_Index.Max)
-            //    || Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_CV_DETECT_IN_SS_1] != true)
-            //{
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_3).ToString()];
-            //}
-            //else
-            //{
-            //    // Lift 3곳에 Tray가 Max층까지 다 싸여 있으면 1번 List에서 기다린다.
-            //    pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Out_Handler_X_Put_Down_1).ToString()];
-            //}
+                        Global.Mlog.Info($"Unload_Y_Step => IsMovePutDownPosY Done");
+                        Global.Mlog.Info($"Unload_Y_Step => MovePutDownPosZ");
 
-            return pos;
-        }
-        #endregion
-        #region // Top Handler
-        private bool MoveTopHandlerNGPort()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_NG_Port).ToString()];
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("TOP_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
-        }
-        private bool IsMoveTopNGPortDone()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_NG_Port).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveTopHandlerPutDownPos()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_Put_Down).ToString()];
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("TOP_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
-        }
-        private bool MoveTopHandlerPickUpPos()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_Pick_Up).ToString()];
-            pos = Math.Round(pos, 2);
-            Global.instance.Write_Sequence_Log("TOP_SERVO_POS", pos.ToString());
-            return SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
-        }
-        private bool IsTopHandlerPickUpPos()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_Pick_Up).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveTopReturnCvRun()
-        {
-            return SingletonManager.instance.Ez_Model.MoveJog((int)(ServoSlave_List.Top_CV_X),(int)Direction.CCW, 2);
-        }
-        private bool MoveTopReturnCvStop()
-        {
-            return SingletonManager.instance.Ez_Model.ServoStop((int)(ServoSlave_List.Top_CV_X));
-        }
-        private bool IsTopHandlerPutDownPos()
-        {
-            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Handler_Put_Down).ToString()];
-            // 소수점아래 2자리까지비교
-            pos = Math.Round(pos, 2);
-            double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
-            if (GetPos == pos)
-                return true;
-            return false;
-        }
-        private bool MoveLiftDown(int Index)
-        {
-            double pos;
-            bool ret = false;
-            if (Index == 3)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_1).ToString()];
-                pos = Math.Round(pos, 2);
-                ret = SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Lift_1_Z), pos);
+                        Ez_Model.MovePutDownPosZ();
+                        UnloadYStep = Unload_Y_Step.Move_Z_PutDown_Done;
+
+                        Global.Mlog.Info($"Unload_Y_Step => Move_Z_PutDown_Done");
+                    }
+                    break;
+                case Unload_Y_Step.Move_Z_PutDown_Done:
+                    if (Ez_Model.IsMovePutDownPosZ() == true)
+                    {
+                        Global.Mlog.Info($"Unload_Y_Step => IsMovePutDownPosZ Done");
+                        Global.Mlog.Info($"Unload_Y_Step => Ungrip");
+                        Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, false);
+                        Global.instance.UnLoadCountPlus();
+                        UnloadYStep = Unload_Y_Step.UnGrip_Check;
+
+                        Global.Mlog.Info($"Unload_Y_Step => UnGrip_Check");
+                    }
+                    break;
+                case Unload_Y_Step.UnGrip_Check:
+                    // clamp가 아직 남아있으면 
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_UNGRIP_CYL] == true)
+                    {
+                        Ez_Model.MoveReadyPosZ();
+                        Global.Mlog.Info($"Unload_Y_Step => MoveReadyPosZ");
+                        UnloadYStep = Unload_Y_Step.Move_Z_PutDown_Up_Done;
+
+                        Global.Mlog.Info($"Unload_Y_Step => Move_Z_PutDown_Up_Done");
+                    }
+                    break;
+                case Unload_Y_Step.Move_Z_PutDown_Up_Done:
+                    if (Ez_Model.IsMoveReadyPosZ() == true)
+                    {
+                        Global.Mlog.Info($"Unload_Y_Step => IsMoveReadyPosZ Done");
+
+                        SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] -= 1;
+                        int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo];
+                        SingletonManager.instance.Display_Lift[SingletonManager.instance.UnLoadStageNo].Floor[floor] = false;
+                       
+                        UnloadYStep = Unload_Y_Step.Idle;
+                        Global.Mlog.Info($"Unload_Y_Step => Next Floor : {floor.ToString()}");
+                        Global.Mlog.Info($"Unload_Y_Step => Next Floor : Idle");
+                    }
+                    break; 
             }
-            if (Index == 4)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_2).ToString()];
-                pos = Math.Round(pos, 2);
-                ret = SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Lift_2_Z), pos);
-            }
-            if (Index == 5)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_3).ToString()];
-                pos = Math.Round(pos, 2);
-                ret = SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Lift_3_Z), pos);
-            }
-            return ret;
+            int step = (int)UnloadYStep;
+            Global.instance.Write_Sequence_Log("UNLOAD_Y_STEP", step.ToString());
+            Global.instance.Write_Sequence_Log("UNLOAD_FLOOW", SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo].ToString());
         }
-        private bool IsMoveLiftDownDone(int Index)
-        {
-            double pos;
-            double GetPos;
-            if (Index == 0 || Index == 1 || Index == 2)
-                return true;
-            if (Index == 3)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_1).ToString()];
-                // 소수점아래 2자리까지비교
-                pos = Math.Round(pos, 2);
-                GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Lift_1_Z)), 2);
-                if (GetPos == pos)
-                    return true;
-            }
-            if (Index == 4)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_2).ToString()];
-                // 소수점아래 2자리까지비교
-                pos = Math.Round(pos, 2);
-                GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Lift_2_Z)), 2);
-                if (GetPos == pos)
-                    return true;
-            }
-            if (Index == 5)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Low_3).ToString()];
-                // 소수점아래 2자리까지비교
-                pos = Math.Round(pos, 2);
-                GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Lift_3_Z)), 2);
-                if (GetPos == pos)
-                    return true;
-            }
-            return false;
-        }
-        private bool MoveLiftUp(int Index)
-        {
-            double pos;
-            bool ret = false;
-            if (Index == 3)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_1).ToString()];
-                pos = Math.Round(pos, 2);
-                ret = SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Lift_1_Z), pos);
-            }
-            if (Index == 4)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_2).ToString()];
-                pos = Math.Round(pos, 2);
-                ret = SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Lift_2_Z), pos);
-            }
-            if (Index == 5)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_3).ToString()];
-                pos = Math.Round(pos, 2);
-                ret = SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Lift_3_Z), pos);
-            }
-            return ret;
-        }
-        private bool IsMoveLiftUpDone(int Index)
-        {
-            double pos;
-            double GetPos;
-            if (Index == 3)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_1).ToString()];
-                // 소수점아래 2자리까지비교
-                pos = Math.Round(pos, 2);
-                GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Lift_1_Z)), 2);
-                if (GetPos == pos)
-                    return true;
-            }
-            if (Index == 4)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_2).ToString()];
-                // 소수점아래 2자리까지비교
-                pos = Math.Round(pos, 2);
-                GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Lift_2_Z)), 2);
-                if (GetPos == pos)
-                    return true;
-            }
-            if (Index == 5)
-            {
-                pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Lift_Upper_3).ToString()];
-                // 소수점아래 2자리까지비교
-                pos = Math.Round(pos, 2);
-                GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Lift_3_Z)), 2);
-                if (GetPos == pos)
-                    return true;
-            }
-            return false;
-        }
-        #endregion
         private bool Dio_Output(DO_MAP io, bool OnOff)
         {
             bool result = false;
@@ -1812,308 +1582,104 @@ namespace YJ_AutoUnClamp.Models
             Thread.Sleep(5);
             return result;
         }
-        private void Dio_Aging_CV_Control(int Index, bool OnOff)
+        
+        private void LiftInterfaceOnOff(int Index, bool OnOff)
         {
-            if (Index == 0)
+            if (Index == (int)Lift_Index.Lift_1)
             {
-                Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_RUN_1_1, OnOff);
-                Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_RUN_1_2, OnOff);
+                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_UPPER_INTERFACE] == true)
+                {
+                    Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_INTERFACE_1, OnOff);
+                }
+                else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_LOW_INTERFACE] == true)
+                {
+                    Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_INTERFASE_1, OnOff);
+                }
             }
-            if (Index == 1)
+            else if (Index == (int)Lift_Index.Lift_2)
             {
-                Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_RUN_2_1, OnOff);
-                Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_RUN_2_2, OnOff);
+                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_UPPER_INTERFACE] == true)
+                {
+                    Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_INTERFACE_2, OnOff);
+                }
+                else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_LOW_INTERFACE] == true)
+                {
+                    Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_INTERFASE_2, OnOff);
+                }
             }
-            if (Index == 2)
+            else if (Index == (int)Lift_Index.Lift_3)
             {
-                Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_RUN_3_1, OnOff);
-                Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_RUN_3_2, OnOff);
-            }
-            if (Index == 3)
-            {
-                Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_RUN_1_1, OnOff);
-                Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_RUN_1_2, OnOff);
-            }
-            
-            if (Index == 4)
-            {
-                Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_RUN_2_1, OnOff);
-                Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_RUN_2_2, OnOff);
-            }
-            
-            if (Index == 5)
-            {
-                Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_RUN_3_1, OnOff);
-                Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_RUN_3_2, OnOff);
+                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_UPPER_INTERFACE] == true)
+                {
+                    Dio_Output(DO_MAP.AGING_INVERT_CV_UPPER_INTERFACE_3, OnOff);
+                }
+                else if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_LOW_INTERFACE] == true)
+                {
+                    Dio_Output(DO_MAP.AGING_INVERT_CV_LOW_INTERFASE_3, OnOff);
+                }
             }
         }
-        private void GetAgingCVStartEndSS(int Index)
-        {
-            if (Index == 0)
-            {
-                AgingCvFull[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_2_UPPER_DETECT_SS_2];
-                AgingCvStart[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_1_UPPER_DETECT_SS_1];
-            }
-            if (Index == 1)
-            {
-                AgingCvFull[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_2_UPPER_DETECT_SS_2];
-                AgingCvStart[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_1_UPPER_DETECT_SS_1];
-            }
-            if (Index == 2)
-            {
-                AgingCvFull[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_2_UPPER_DETECT_SS_2];
-                AgingCvStart[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_1_UPPER_DETECT_SS_1];
-            }
-            if (Index == 3)
-            {
-                AgingCvFull[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_2_LOW_DETECT_SS_2];
-                AgingCvStart[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_1_LOW_DETECT_SS_1];
-            }
-            
-            if (Index == 4)
-            {
-                AgingCvFull[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_2_LOW_DETECT_SS_2];
-                AgingCvStart[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_2_1_LOW_DETECT_SS_1];
-            }
-            if (Index == 5)
-            {
-                AgingCvFull[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_2_LOW_DETECT_SS_2];
-                AgingCvStart[Index] = Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_3_1_LOW_DETECT_SS_1];
-            }
-        }
-        private bool LiftLowMoveConditon(int index)
-        {
-            // Lift Donw 하는데 간섭이 있는지 확인
-            if (index == 3)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_CV_DETECT_OUT_SS_2] == false)
-                    return true;
-            }
-            if (index == 4)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_CV_DETECT_OUT_SS_2] == false)
-                    return true;
-            }
-            if (index == 5)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_CV_DETECT_OUT_SS_2] == false)
-                    return true;
-            }
-            return false; 
-        }
-        private bool UnclampInterfaseReturnOn(int index)
-        {
-            if (index == 0)
-            { 
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_UPPER_INTERFACE_1] == true)
-                    return true;
-            }
-            if (index == 1)
-            { 
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_UPPER_INTERFACE_2] == true)
-                    return true;
-            }
-            if (index == 2)
-            { 
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_UPPER_INTERFACE_3] == true)
-                    return true;
-            }
-            if (index == 3)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_LOW_INTERFACE_1] == true)
-                    return true;
-            }
-            if (index == 4)
-            { 
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_LOW_INTERFACE_2] == true)
-                    return true;
-            }
-            if (index == 5)
-             { 
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_LOW_INTERFACE_3] == true)
-                    return true;
-             }
-            return false;
-        }
-        private bool GetUnclampInterfaseOff(int index)
-        {
-            if (index == 0)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_UPPER_INTERFACE_1] == false)
-                    return true;
-            }
-            if (index == 1)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_UPPER_INTERFACE_2] == false)
-                    return true;
-            }
-            if (index == 2)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_UPPER_INTERFACE_3] == false)
-                    return true;
-            }
-            if (index == 3)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_LOW_INTERFACE_1] == false)
-                    return true;
-            }
-            if (index == 4)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_LOW_INTERFACE_2] == false)
-                    return true;
-            }
-            if (index == 5)
-            {
-                if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_LOW_INTERFACE_3] == false)
-                    return true;
-            }
-            return false;
-        }
-        private void SetUnclampInterfase(int index, bool OnOff)
-        {
-            if (index == 0)
-                Dio_Output(DO_MAP.AGING_CV_UPPER_INTERFACE_1, OnOff);
-            if (index == 1)
-                Dio_Output(DO_MAP.AGING_CV_UPPER_INTERFACE_2, OnOff);
-            if (index == 2)
-                Dio_Output(DO_MAP.AGING_CV_UPPER_INTERFACE_3, OnOff);
-            if (index == 3)
-                Dio_Output(DO_MAP.AGING_CV_LOW_INTERFACE_1, OnOff);
-            if (index == 4)
-                Dio_Output(DO_MAP.AGING_CV_LOW_INTERFACE_2, OnOff);
-            if (index == 5)
-                Dio_Output(DO_MAP.AGING_CV_LOW_INTERFACE_3, OnOff);
-        }
-        public void StartReady()
+        public void SetLastStep()
         {
             var myIni = new IniFile(Global.instance.IniSequencePath);
-
-            double pos=0;
-            string value="";
-            //value = myIni.Read("OUT_HANDLER_STEP", "SEQUENCE");
-            //Out_Handle_Step = (OutHandle)Convert.ToInt16(value);
-            value = myIni.Read("TOP_STEP", "SEQUENCE");
+            string value = "";
+            value = myIni.Read("UNLOAD_Y_STEP", "SEQUENCE");
             if (string.IsNullOrEmpty(value) == true)
             {
-                Out_Handle_Step = OutHandle.Idle;
-                Top_Handle_Step = TopHandle.Idle;
-                In_Grip_Step = InBottomHandle.Idle;
-                SingletonManager.instance.LoadStageNo = 0;
-                SingletonManager.instance.IsY_PickupColl = false;
-                SingletonManager.instance.UnitLastPositionSet = false;
-                SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo] = 0;
+                LiftStep = Lift_Step.Idle;
+                UnClampStep = UnClampHandStep.Idle;
+                RtnBtmStep = ReturnBottomStep.Idle;
+                RtnTopStep = ReturnTopStep.Idle;
+                TopOutCVStep = Top_Out_CV.Idle;
+                UnClampCvStep = UnClamp_CV_Step.Idle;
+                UnloadCvStep = Unload_CV_Step.Idle;
+                UnloadXlStep = Unload_X_Step.Idle;
+                UnloadYStep = Unload_Y_Step.Idle;
+                SingletonManager.instance.UnLoadStageNo = 0;
+                SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] = 0;
                 return;
             }
-            Top_Handle_Step = (TopHandle)Convert.ToInt16(value);
-            value = myIni.Read("BOTTOM_STEP", "SEQUENCE");
-            In_Grip_Step = (InBottomHandle)Convert.ToInt16(value);
-            value = myIni.Read("Y_PICKUP_COLL_FLAG", "SEQUENCE");
-            SingletonManager.instance.IsY_PickupColl =bool.Parse(value);
-            value = myIni.Read("OUT_LOAD_STAGE", "SEQUENCE");
-            SingletonManager.instance.LoadStageNo = Convert.ToInt32(value);
-            value = myIni.Read("OUT_LOAD_FLOOR", "SEQUENCE");
-            SingletonManager.instance.LoadFloor[SingletonManager.instance.LoadStageNo] = Convert.ToInt32(value);
-            
-            
-            switch (ReadyStep)
+            UnloadYStep = (Unload_Y_Step)Convert.ToInt16(value);
+            value = myIni.Read("LIFT_STEP", "SEQUENCE");
+            LiftStep = (Lift_Step)Convert.ToInt16(value);
+            value = myIni.Read("UNCLAMP_STEP", "SEQUENCE");
+            UnClampStep = (UnClampHandStep)Convert.ToInt16(value);
+            value = myIni.Read("RTN_BTM_STEP", "SEQUENCE");
+            RtnBtmStep = (ReturnBottomStep)Convert.ToInt16(value);
+            value = myIni.Read("RTN_TOP_STEP", "SEQUENCE");
+            RtnTopStep = (ReturnTopStep)Convert.ToInt16(value);
+            value = myIni.Read("TOP_OUT_CV_STEP", "SEQUENCE");
+            TopOutCVStep = (Top_Out_CV)Convert.ToInt16(value);
+            value = myIni.Read("UNCLAMP_CV_STEP", "SEQUENCE");
+            UnClampCvStep = (UnClamp_CV_Step)Convert.ToInt16(value);
+            value = myIni.Read("UNLOAD_CV_STEP", "SEQUENCE");
+            UnloadCvStep = (Unload_CV_Step)Convert.ToInt16(value);
+            value = myIni.Read("UNLOAD_X_STEP", "SEQUENCE");
+            UnloadXlStep = (Unload_X_Step)Convert.ToInt16(value);
+            value = myIni.Read("LIFT_STAGE", "SEQUENCE");
+            SingletonManager.instance.UnLoadStageNo = Convert.ToInt32(value);
+            value = myIni.Read("UNLOAD_FLOOW", "SEQUENCE");
+            SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] = Convert.ToInt32(value);
+            //value = myIni.Read("RTN_BTM_DONE", "SEQUENCE");
+            //if (value == "") UnclampBottomReturnDone = false;
+            //else    UnclampBottomReturnDone = bool.Parse(value); 
+        }
+        private void StageCheck()
+        {
+            if (SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] == 0)
             {
-                case Ready_Step.Idle:
-                    
-                    ReadyStep = Ready_Step.Out_Z_Ready_Move;
-                    Dio.Set_HandlerUpDown(true);
-                    break;
-                case Ready_Step.Out_Z_Ready_Move:
-                    MoveOutHandlerRadyZ();
-                    ReadyStep = Ready_Step.Out_Z_Ready_Wait;
-                    break;
-                case Ready_Step.Out_Z_Ready_Wait:
-                    if (IsOutHandlerReadyDoneZ() == true)
-                    {
-                        ReadyStep = Ready_Step.In_Handler_Ready_Move;
-                    }
-                    break;
-                case Ready_Step.In_Handler_Ready_Move:
-                    Dio_Output(DO_MAP.TRANSFER_FORWARD_SOL, true);
-                    ReadyStep = Ready_Step.In_Handler_Ready_Wait;
-                    break;
-                case Ready_Step.In_Handler_Ready_Wait:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_BACKWARD_CYL_SS] == true)
-                        ReadyStep = Ready_Step.Y_Position_Move;
-                    break;
-                case Ready_Step.Y_Position_Move:
-                    value = myIni.Read("OUT_Y_SERVO_POS", "SEQUENCE");
-                    pos = Math.Round(Convert.ToDouble(value), 2);
-                    SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Out_Y_Handler_Y), pos);
-                    ReadyStep = Ready_Step.Y_Move_Wait;
-                    break;
-                case Ready_Step.Y_Move_Wait:
-                    value = myIni.Read("OUT_Y_SERVO_POS", "SEQUENCE");
-                    pos = Math.Round(Convert.ToDouble(value), 2);
-                    double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Out_Y_Handler_Y)), 2);
-                    if (GetPos == pos)
-                    {
-                        if (IsOutHandlerPickupPosY() == true)
-                            Out_Handle_Step = OutHandle.Out_Handle_X_Pickup_Pos_Check;
-                        else if (IsOutHandlerXPutDownPos() == true)
-                            Out_Handle_Step = OutHandle.Out_Handle_X_PutDown_Pos_Check;
-
-                        value = myIni.Read("TOP_SERVO_POS", "SEQUENCE");
-                        pos = Math.Round(Convert.ToDouble(value), 2);
-                        SingletonManager.instance.Ez_Model.MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
-
-                        value = myIni.Read("BOTTOM_HANDLER_POS", "SEQUENCE");
-                        if (value == "LEFT")
-                            Dio_Output(DO_MAP.TRANSFER_FORWARD_SOL, true);
-                        else
-                            Dio_Output(DO_MAP.TRANSFER_FORWARD_SOL, false);
-                        ReadyStep = Ready_Step.X_Z_In_Ready_Wait;
-                    }
-                    break;
-                case Ready_Step.X_Z_In_Ready_Wait:
-                    value = myIni.Read("BOTTOM_HANDLER_POS", "SEQUENCE");
-                    bool InHanderLR = false;
-                    if (value == "LEFT")
-                    {
-                        InHanderLR = Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_BACKWARD_CYL_SS];
-                    }
-                    else
-                    {
-                        InHanderLR = Dio.DI_RAW_DATA[(int)DI_MAP.TRANSFER_X_FORWARD_CYL_SS];
-                    }
-
-                    value = myIni.Read("TOP_SERVO_POS", "SEQUENCE");
-                    pos = Math.Round(Convert.ToDouble(value), 2);
-                    GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.Top_X_Handler_X)), 2);
-
-                    if (InHanderLR == true
-                    && GetPos == pos)
-                    {
-                        value = myIni.Read("TOP_JIG_1", "SEQUENCE");
-                        if (value == "UP")
-                            Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, false);
-                        else
-                            Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_1, true);
-                        value = myIni.Read("TOP_JIG_2", "SEQUENCE");
-                        if (value == "UP")
-                            Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, false);
-                        else
-                            Dio_Output(DO_MAP.TOP_JIG_TR_Z_DOWN_SOL_2, true);
-
-                        value = myIni.Read("BOTTOM_RZ", "SEQUENCE");
-                        if (value == "UP")
-                            Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, false);
-                        else
-                            Dio_Output(DO_MAP.TRANSFER_RZ_DOWN_SOL, true);
-                        value = myIni.Read("BOTTOM_LZ", "SEQUENCE");
-                        if (value == "UP")
-                            Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, false);
-                        else
-                            Dio_Output(DO_MAP.TRANSFER_LZ_DOWN_SOL, true);
-
-                        ReadyStep = Ready_Step.Idle;
-                        SingletonManager.instance.UnitLastPositionSet = false;
-                    }
-                    break;
+                if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_1_JIG_OUT_2] == true)
+                {
+                    SingletonManager.instance.UnLoadStageNo = (int)Lift_Index.Lift_1;
+                }
+                else if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_2_JIG_OUT_2] == true)
+                {
+                    SingletonManager.instance.UnLoadStageNo = (int)Lift_Index.Lift_2;
+                }
+                else if (Dio.DI_RAW_DATA[(int)DI_MAP.LIFT_3_JIG_OUT_2] == true)
+                {
+                    SingletonManager.instance.UnLoadStageNo = (int)Lift_Index.Lift_3;
+                }
             }
         }
     }

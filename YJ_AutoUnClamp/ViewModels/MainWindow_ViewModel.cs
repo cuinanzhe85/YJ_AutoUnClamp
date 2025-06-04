@@ -8,15 +8,18 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using YJ_AutoUnClamp.Models;
 using YJ_AutoUnClamp.Utils;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace YJ_AutoUnClamp.ViewModels
 {
     public class MainWindow_ViewModel : BaseMainControlViewModel
     {
+        public NFC_HID NFC_HID { get; set; }
         #region // ICommand Property
         public ICommand BottomMenu_ButtonCommands { get; private set; }
         #endregion
@@ -41,13 +44,13 @@ namespace YJ_AutoUnClamp.ViewModels
         private readonly Dictionary<MainWindow_PopupList, Func<(Window, Child_ViewModel)>> PopupFactories;
         #endregion
 
-        private string _DepartmentName = "Manufacturing Automation Group(Mobile)";
+        private string _DepartmentName = "Mobile";
         public string DepartmentName
         {
             get { return _DepartmentName; }
             set { SetValue(ref _DepartmentName, value); }
         }
-        private string _SoftwareName = "Auto Clmap Inspection";
+        private string _SoftwareName = "AUTO UNCLAMP";
         public string SoftwareName
         {
             get { return _SoftwareName; }
@@ -59,7 +62,12 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _SoftwareVersion; }
             set { SetValue(ref _SoftwareVersion, value); }
         }
-
+        private ListBox _LogList = new ListBox();
+        public ListBox LogList
+        {
+            get { return _LogList; }
+            set { SetValue(ref _LogList, value); }
+        }
         #region // Loading bacground
         private BackgroundWorker bgWorkerLoading;
         #endregion
@@ -83,6 +91,9 @@ namespace YJ_AutoUnClamp.ViewModels
             bgWorkerLoading.DoWork += bgWorkerLoading_DoWork;
             bgWorkerLoading.RunWorkerCompleted += bgWorkerLoading_RunWorkerCompleted;
             bgWorkerLoading.RunWorkerAsync();
+
+            // Main UI Log Event Set
+            Global.instance.UiLogSignal += LogReceive;
         }
         private void bgWorkerLoading_DoWork(object sender, DoWorkEventArgs e)
         {
@@ -91,6 +102,7 @@ namespace YJ_AutoUnClamp.ViewModels
             Application.Current.Dispatcher.BeginInvoke(
                 (ThreadStart)(() =>
                 {
+                    //NFC_HID = new NFC_HID();
                     MainContents_ViewModel = CreateAndCacheViewModel<Auto_ViewModel>("Auto");
                 }), DispatcherPriority.Send);
         }
@@ -144,6 +156,8 @@ namespace YJ_AutoUnClamp.ViewModels
                     ChangeMainContentsView<Data_ViewModel>("Data");
                     break;
                 case "Teach":
+                    // Tower Lamp Operator
+                    Global.instance.Set_TowerLaamp(Global.TowerLampType.Operator);
                     ChangeMainContentsView<Teach_ViewModel>("Teach");
                     break;
                 case "Log":
@@ -160,8 +174,39 @@ namespace YJ_AutoUnClamp.ViewModels
                     break;
             }
         }
+        public void LogReceive(string content, Global.UiLogType type)
+        {
+            string msg = string.Format("{0} - {1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), content);
+            System.Windows.Media.Brush brush;
+
+            if (type == Global.UiLogType.Info)
+                brush = System.Windows.Media.Brushes.Black;
+            else if (type == Global.UiLogType.Error)
+                brush = System.Windows.Media.Brushes.OrangeRed;
+            else
+                brush = System.Windows.Media.Brushes.Transparent;
+
+            if (LogList.Items.Count >= 50)
+            {
+                LogList.Items.RemoveAt(0);
+            }
+
+            LogList.Items.Add(new ListBoxItem
+            {
+                Content = msg,
+                Foreground = brush
+            });
+
+            LogList.SelectedIndex = LogList.Items.Count - 1;
+        }
         private async void SoftwareExit()
         {
+            // 검사가 진행중이라면, 검사 종료를 먼저 하고 종료해야함
+            if (SingletonManager.instance.IsInspectionStart == true)
+            {
+                Global.instance.ShowMessagebox("Inspection is running. Please Stop Inspection First");
+                return;
+            }
             Global.Mlog.Info($"---------- Software Exit ----------");
             Global.instance.BusyContent = "Please Wait.  Now Software Exit...";
             Global.instance.BusyStatus = true;
@@ -179,9 +224,15 @@ namespace YJ_AutoUnClamp.ViewModels
                 SingletonManager.instance.Ez_Dio.DioThreadStop();
                 
                 // Bcr Close
-                SingletonManager.instance.Barcode_Model.Close();
-                // Label Print Close
-                SingletonManager.instance.LabelPrint_Model.Close();
+                for (int i=0; i<(int)Serial_Model.SerialIndex.Max; i++)
+                {
+                    SingletonManager.instance.SerialModel[i].Close();
+                }
+                for (int i = 0; i < (int)EziDio_Model.DI_MAP.DI_MAX / 16; i++)
+                {
+                    SingletonManager.instance.Ez_Dio.Close(i);
+                }
+                SingletonManager.instance.TcpClient.IsReconnectThreadClose = true;
             });
 
             // UI 스레드에서 Dispose 및 Shutdown 호출
@@ -203,6 +254,8 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             BottomMenu_ButtonCommands = null;
 
+            // Ui Log Event 해제
+            Global.instance.UiLogSignal -= LogReceive;
             // Loading BackgroundWorker 해제
             bgWorkerLoading.DoWork -= bgWorkerLoading_DoWork;
             bgWorkerLoading.RunWorkerCompleted -= bgWorkerLoading_RunWorkerCompleted;

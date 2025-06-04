@@ -218,5 +218,58 @@ namespace YJ_AutoUnClamp.Converters
         {
             throw new NotImplementedException();
         }
+        
+    }
+    public class FloorColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            try
+            {
+                bool m = (bool)value;
+                if (m == false)
+                {
+                    return "LightGray";
+                }
+                else
+                {
+                    return "LimeGreen";
+                }
+            }
+            catch
+            {
+                return "LightGray";
+            }
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+    public class MessageboxBackgroundConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            try
+            {
+                bool m = (bool)value;
+                if (m == true)
+                {
+                    return "OrangeRed";
+                }
+                else
+                {
+                    return "CornflowerBlue";
+                }
+            }
+            catch
+            {
+                return "OrangeRed";
+            }
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

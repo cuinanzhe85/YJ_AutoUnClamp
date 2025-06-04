@@ -42,12 +42,6 @@ namespace YJ_AutoUnClamp.Models
             get { return _Status; }
             set { SetValue(ref _Status, value); }
         }
-        private Image _ImageSource;
-        public Image ImageSource
-        {
-            get { return _ImageSource; }
-            set { SetValue(ref _ImageSource, value); }
-        }
         private string _TactTime;
         public string TactTime
         {
@@ -60,9 +54,18 @@ namespace YJ_AutoUnClamp.Models
             get { return _Barcode; }
             set { SetValue(ref _Barcode, value); }
         }
-        public bool IsJudgeOk { get; set; }
-        public bool IsOutWait { get; set; }
-        public bool IsSkip { get; set; }
+        private string _InputCount;
+        public string InputCount
+        {
+            get { return _InputCount; }
+            set { SetValue(ref _InputCount, value); }
+        }
+        private string _UnLoadCount ="";
+        public string UnLoadCount
+        {
+            get { return _UnLoadCount; }
+            set { SetValue(ref _UnLoadCount, value); }
+        }
         // Stopwatch 및 DispatcherTimer 추가
         private Stopwatch _Stopwatch;
         public Channel_Model(ChannelList channel)
@@ -70,13 +73,10 @@ namespace YJ_AutoUnClamp.Models
             this.Index = (int)channel;
             this.Channel = channel;
             this.Status = ChannelStatus.EMPTY;
-            this.ImageSource = null;
             this.TactTime = string.Empty;
             this.Barcode = string.Empty;
-            this.IsJudgeOk = false;
-            this.IsOutWait = false;
-            this.IsSkip = false;
-
+            this.InputCount = "0";
+            this.UnLoadCount = "0";
             // Stop watch 초기화
             _Stopwatch = new Stopwatch();
         }

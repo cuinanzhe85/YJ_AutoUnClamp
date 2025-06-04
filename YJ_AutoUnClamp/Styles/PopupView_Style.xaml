@@ -227,4 +227,31 @@
             </Trigger>
         </Style.Triggers>
     </Style>
+    <Style x:Key="Option_TextStyle" TargetType="telerik:RadWatermarkTextBox">
+        <Setter Property="Grid.Column" Value="1"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="2,5,10,2"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="telerik:StyleManager.Theme" Value="Material"/>
+    </Style>
+    <Style x:Key="Option_LabelStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Background" Value="LightSteelBlue"/>
+        <Setter Property="Margin" Value="5,5,0,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="Option_ComboStyle" TargetType="telerik:RadComboBox">
+        <Setter Property="Grid.Column" Value="1"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Margin" Value="10,5,10,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="telerik:StyleManager.Theme" Value="Material"/>
+    </Style>
 </ResourceDictionary>
