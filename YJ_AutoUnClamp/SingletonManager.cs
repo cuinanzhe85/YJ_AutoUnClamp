@@ -127,7 +127,7 @@ namespace YJ_AutoUnClamp
             }
             HttpClient.Timeout = TimeSpan.FromSeconds(2);
         }
-        public async void Run()
+        public void Run()
         {
             //BusyContent
             Global.instance.BusyContent = "Program Initialize...";
@@ -138,7 +138,7 @@ namespace YJ_AutoUnClamp
             // Motion Init
             Motion_Init();
             // Dio Init
-            await DioBoard_Init();
+            DioBoard_Init();
             // Serial Port Init : Barcode, Label Print
             SerialPort_init();
             // Load Teaching Data

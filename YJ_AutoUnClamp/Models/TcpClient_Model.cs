@@ -146,17 +146,15 @@ namespace YJ_AutoUnClamp.Models
             _ReconnectThreadRun = true;
             try
             {
-                pingReply = ping.Send(IPAddress.Parse(IpAddress));
                 while (SingletonManager.instance.IsTcpConnected == false)
                 {
+                    pingReply = ping.Send(IPAddress.Parse(IpAddress));
                     if (pingReply.Status == IPStatus.Success)
                     {
-                        if (Connect(IpAddress, Port)==false)
-                            pingReply = ping.Send(IPAddress.Parse(IpAddress));
+                        Connect(IpAddress, Port);
                     }
                     else
                     {
-                        pingReply = ping.Send(IPAddress.Parse(IpAddress));
                         SingletonManager.instance.IsTcpConnected = false;
                     }
                     if (IsReconnectThreadClose == true)
