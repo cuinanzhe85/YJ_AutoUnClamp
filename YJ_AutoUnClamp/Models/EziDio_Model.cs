@@ -313,7 +313,7 @@ namespace YJ_AutoUnClamp.Models
                 }
             };
         }
-        public async Task<bool> Connect(int iSlaveNo)
+        public bool Connect(int iSlaveNo)
         {
             try
             {
@@ -321,8 +321,7 @@ namespace YJ_AutoUnClamp.Models
                 // Already Connected
                 if (IsConnected[iSlaveNo] == true)
                 {
-                    Close(iSlaveNo);
-                    await Task.Delay(1000);
+                    return true;
                 }
                 if (iSlaveNo == 0) IpAddress = IPAddress.Parse("192.168.0.8");
                 if (iSlaveNo == 1) IpAddress = IPAddress.Parse("192.168.0.9");
