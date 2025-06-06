@@ -21,6 +21,7 @@ namespace YJ_AutoUnClamp.Models
         private byte STX = 0x02;
         private byte ETX = 0x03;
 
+        private bool _ReconnectThreadRun = false;
         private string IpAddress = "192.168.10.20";
         private int Port = 8000;
         private string _TcpReceiveData = string.Empty;
@@ -53,13 +54,17 @@ namespace YJ_AutoUnClamp.Models
                 this.rThread = new Thread(new ThreadStart(Receive));
                 this.rThread.Start(); //메시지 읽어오는 스레드 시작
 
+                _ReconnectThreadRun = false;
                 return true; // 연결 성공
             }
             catch (Exception ex)
             {
                 Global.Mlog.Info($"서버 연결 실패: {ex.Message}");
-                this.rReconnectThread = new Thread(new ThreadStart(TcpReconnect));
-                rReconnectThread.Start();
+                if (_ReconnectThreadRun == false)
+                {
+                    this.rReconnectThread = new Thread(new ThreadStart(TcpReconnect));
+                    rReconnectThread.Start();
+                }
                 return false; // 연결 실패
             }
         }
@@ -138,6 +143,7 @@ namespace YJ_AutoUnClamp.Models
         }
         public void TcpReconnect()
         {
+            _ReconnectThreadRun = true;
             try
             {
                 pingReply = ping.Send(IPAddress.Parse(IpAddress));

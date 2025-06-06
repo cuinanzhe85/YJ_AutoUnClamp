@@ -119,6 +119,7 @@ namespace YJ_AutoUnClamp.Models
             if (SerialPort.IsOpen == false)
                 return;
 
+            Global.Mlog.Info($"{PortName} : {Port} Trig Send");
             SerialPort.Write("+");
         }
         
@@ -135,6 +136,7 @@ namespace YJ_AutoUnClamp.Models
                     if (!string.IsNullOrEmpty(Barcode))
                     {
                         IsBcrReceived = true;
+                        Global.Mlog.Info($"{PortName} : {Port} Receive '{Barcode}'");
                     }
                 }
                 else if (PortName.Contains("NFC"))
@@ -146,6 +148,8 @@ namespace YJ_AutoUnClamp.Models
                             string[] parts = Data.Split('=');
                             NfcData = parts[1].Trim();
                             IsBcrReceived = true;
+
+                            Global.Mlog.Info($"{PortName} : {Port} Receive '{Data}'");
                         }
                     }
                     catch

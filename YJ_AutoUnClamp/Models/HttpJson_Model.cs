@@ -54,20 +54,24 @@ namespace YJ_AutoUnClamp.Models
                 {
                     qmSubInspForJson01DVO = new QmSubInspForJson01DVO
                     {
+                        userId  = "VDJSONIFID",
+                        UserNm = "TEST",
                         fctCode = "C100E",
                         plantCode = "P104",
                         inspTopCode = "TOPJ31",
                         prodcMagtNo = _prodcMagtNo,
-                        rsltCode = methodName == "saveInspInfo" ? _rsltCode : null,
-                        bcrIp = methodName == "saveInspInfo" ? GetLocalIP() : null,
-                        jigNo = null,
-                        inspDt = methodName == "saveInspInfo" ? $"{DateTime.Now.ToString("yyyyMMddHHmmss")}" : null
+                        rsltCode = _rsltCode ,
+                        bcrIp = GetLocalIP() + "1212",
+                        jigNo = "1",
+                        inspDt = $"{DateTime.Now.ToString("yyyyMMddHHmmss")}"
                     },
                     anyframeDVO = new AnyframeDVO
                     {
                         appName = "com.samsung.gmes2.qm.json.app.QmSubInspForJsonApp",
                         methodName = methodName,
                         inputSVOName = "com.samsung.gmes2.qm.json.vo.QmSubInspForJsonSVO",
+                        clientIPAddr = GetLocalIP()+":1212",
+                        userID = "VDJSONIFID",
                         pageNo = "0",
                         pageRowCount = "0"
                     }
@@ -121,6 +125,8 @@ namespace YJ_AutoUnClamp.Models
 
     public class QmSubInspForJson01DVO
     {
+        public string userId { get; set; }
+        public string UserNm { get; set; }
         public string fctCode { get; set; }
         public string plantCode { get; set; }
         public string inspTopCode { get; set; }
@@ -136,6 +142,8 @@ namespace YJ_AutoUnClamp.Models
         public string appName { get; set; }
         public string methodName { get; set; }
         public string inputSVOName { get; set; }
+        public string clientIPAddr { get; set; }
+        public string userID { get; set; }
         public string pageNo { get; set; }
         public string pageRowCount { get; set; }
     }

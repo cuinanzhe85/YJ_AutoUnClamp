@@ -72,6 +72,7 @@ namespace YJ_AutoUnClamp.Models
         private EzMotion_Model_E Ez_Model = SingletonManager.instance.Ez_Model;
 
         private bool _NoneSetTest = true; // Set Test Mode
+
         private bool _isLoopRunning = false;
         public bool UnloadYPutDownMoving=false;
         public bool UnclampBottomReturnDone = false;
@@ -832,6 +833,7 @@ namespace YJ_AutoUnClamp.Models
                     LiftStep = Lift_Step.Clamp_IF_Wait;
 
                     Global.Mlog.Info($"Lift_Step => Clamp_IF_Wait");
+                    Global.Mlog.Info($"Lift_Step => Unloading Y Ready Check");
                     break;
                 case Lift_Step.Clamp_IF_Wait:
                     // Clamp Interface 기다린다

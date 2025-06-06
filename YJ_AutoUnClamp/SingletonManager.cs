@@ -325,14 +325,14 @@ namespace YJ_AutoUnClamp
                 Global.instance.ShowMessagebox(massage);
         }
         
-        private async Task DioBoard_Init()
+        private void DioBoard_Init()
         {
             //BusyContent
             Global.instance.BusyContent = "Dio Board Connecting...";
             
             for (int i =0; i < (int)DI_MAP.DI_MAX / 16; i++)
             {
-                await Ez_Dio.Connect(i);
+                Ez_Dio.Connect(i);
             }
 
             for (int i = 0; i < Ez_Dio.DisplayDio_List.Count + (int)EziDio_Model.DisplayExist_List.Max; i++)
