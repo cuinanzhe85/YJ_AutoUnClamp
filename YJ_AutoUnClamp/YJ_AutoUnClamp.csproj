@@ -62,14 +62,8 @@
     <Reference Include="Costura, Version=6.0.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d, processorArchitecture=MSIL">
       <HintPath>..\packages\Costura.Fody.6.0.0\lib\netstandard2.0\Costura.dll</HintPath>
     </Reference>
-    <Reference Include="GoSdkNet">
-      <HintPath>..\..\..\..\OneDrive\Desktop\3D Scrw Inspection_V4\Emulator and Accelerator\bin\win64\GoSdkNet.dll</HintPath>
-    </Reference>
     <Reference Include="HelixToolkit.Wpf, Version=2.27.0.0, Culture=neutral, PublicKeyToken=52aa3500039caf0d, processorArchitecture=MSIL">
       <HintPath>..\packages\HelixToolkit.Wpf.2.27.0\lib\net462\HelixToolkit.Wpf.dll</HintPath>
-    </Reference>
-    <Reference Include="kApiNet">
-      <HintPath>..\..\..\..\OneDrive\Desktop\3D Scrw Inspection_V4\Emulator and Accelerator\bin\win64\kApiNet.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=3.0.4.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.3.0.4\lib\net462\log4net.dll</HintPath>
@@ -210,6 +204,7 @@
     <Compile Include="ViewModels\PopupView_Model\ModelData_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\MotorVelocity_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\Origin_ViewModel.cs" />
+    <Compile Include="ViewModels\PopupView_Model\Product_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\Safety_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\SystemData_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\TcpSerial_ViewModel.cs" />
@@ -253,6 +248,9 @@
     </Compile>
     <Compile Include="Views\Popup_View\Origin_View.xaml.cs">
       <DependentUpon>Origin_View.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Popup_View\Product_View.xaml.cs">
+      <DependentUpon>Product_View.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Popup_View\Safety_View.xaml.cs">
       <DependentUpon>Safety_View.xaml</DependentUpon>
@@ -339,6 +337,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Popup_View\Origin_View.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Popup_View\Product_View.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

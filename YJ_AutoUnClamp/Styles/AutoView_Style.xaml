@@ -91,12 +91,36 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <Style TargetType="Label" x:Key="Barcode_LableStyle">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background" Value="FloralWhite"/>
+        <Setter Property="telerik:CornerRadiusHelper.ClipRadius" Value="8"/>
+    </Style>
     <Style TargetType="Button" x:Key="Interface_ButtonStyle">
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="Margin" Value="2"/>
         <Setter Property="telerik:CornerRadiusHelper.ClipRadius" Value="8"/>
         <Setter Property="telerik:StyleManager.Theme" Value="Material"/>
+    </Style>
+    
+    <Style TargetType="Label" x:Key="InspectionData_LableStyle">
+        <Setter Property="Margin" Value="2"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="White"/>
+        <Setter Property="BorderThickness" Value="0,1,1,1"/>
+        <Setter Property="telerik:CornerRadiusHelper.ClipRadius" Value="0,8,8,0"/>
     </Style>
     <!--Floor Template-->
     <DataTemplate x:Key="FloorTemplate">
