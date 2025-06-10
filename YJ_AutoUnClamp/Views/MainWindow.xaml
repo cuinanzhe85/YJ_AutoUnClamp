@@ -41,7 +41,7 @@
                     <Run Text="Software : " />
                     <Run Text="{Binding SoftwareVersion}"/><LineBreak/>
                     <Run Text="{Binding Source={x:Static local:Global.instance},Path=NowDate}"/>
-                    
+
                 </TextBlock>
             </Grid>
             <!--Content-->
@@ -55,12 +55,13 @@
             <Border Grid.Row="2" Background="MidnightBlue">
                 <Grid Margin="2.5,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="0.3*"/>
-                        <ColumnDefinition Width="0.4*"/>
-                        <ColumnDefinition Width="0.3*"/>
+                        <ColumnDefinition Width="306*"/>
+                        <ColumnDefinition Width="397*"/>
+                        <ColumnDefinition Width="11*"/>
+                        <ColumnDefinition Width="306*"/>
                     </Grid.ColumnDefinitions>
                     <!--Left Buttons-->
-                    <Grid>
+                    <Grid Grid.ColumnSpan="2" Margin="0,0,396,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -92,15 +93,15 @@
                         </telerik:RadButton>
                     </Grid>
                     <!--Fail Log-->
-                    <ListBox Margin="5" Grid.Column="1"
+                    <ListBox Margin="5,5,5,5" Grid.Column="1"
                                 ItemsSource="{Binding LogList.Items, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                SelectedItem="{Binding LogList.SelectedItem}" telerik:StyleManager.Theme="Windows8">
+                                SelectedItem="{Binding LogList.SelectedItem}" telerik:StyleManager.Theme="Windows8" Grid.ColumnSpan="2">
                         <b:Interaction.Behaviors>
                             <!--<utils:ListBoxScrollIntoViewBehavior/>-->
                         </b:Interaction.Behaviors>
                     </ListBox>
                     <!--Right Buttons-->
-                    <Grid Grid.Column="2">
+                    <Grid Grid.Column="2" Grid.ColumnSpan="2" Margin="10,0,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>

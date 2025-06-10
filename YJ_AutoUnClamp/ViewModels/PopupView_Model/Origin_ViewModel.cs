@@ -46,6 +46,8 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _BusyContent; }
             set { SetValue(ref _BusyContent, value); }
         }
+        private EziDio_Model Dio = SingletonManager.instance.Ez_Dio;
+        private EzMotion_Model_E Ez_Model = SingletonManager.instance.Ez_Model;
         public ObservableCollection<ServoSlaveViewModel> ServoSlaves { get; set; }
         public Origin_ViewModel()
         {
@@ -127,12 +129,18 @@ namespace YJ_AutoUnClamp.ViewModels
                     // 선택된 슬레이브 필터링
                     var selectedSlaves = ServoSlaves.Where(slave => slave.IsChecked).ToList();
                     var failedSlavesList = new List<string>();
-                    SingletonManager.instance.Ez_Dio.Set_HandlerInit(); 
+                    Dio.Set_HandlerInit(); 
                     await Task.Delay(1000);
                     // Servo Origin
                     var Slave = ServoSlaves[(int)ServoSlave_List.In_Z_Handler_Z];
                     if (Slave.IsChecked == true)
                     {
+                        if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.UNLOAD_Z_GRIP] == true
+                            || Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.UNLOAD_LD_Z_GRIP_CYL] == true)
+                        {
+                            Global.instance.ShowMessagebox("Please proceed after checking if there is a product.");
+                            return;
+                        }
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
                         result = await SingletonManager.instance.Ez_Model.ServoOrigin(Slave.SlaveID);
                         Slave.Color = result ? "PaleGreen" : "White";
@@ -141,11 +149,21 @@ namespace YJ_AutoUnClamp.ViewModels
                         {
                             failedSlavesList.Add(Slave.Name);
                         }
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.In_Y].UnloadYStep = Unit_Model.Unload_Y_Step.Idle;
                     }
                     
                     Slave = ServoSlaves[(int)ServoSlave_List.Top_X_Handler_X];
                     if (Slave.IsChecked == true)
                     {
+                        if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_LEFT_Z_GRIP_CYL] == true
+                            || Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_TR_RIGHT_Z_VACUUM] == true
+                            || Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.BOTTOM_RETURN_Z_GRIP] == true
+                            || Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.TOP_RETURN_Z_GRIP] == true
+                            || Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.UNCLAMP_CV_DETECT] == true)
+                        {
+                            Global.instance.ShowMessagebox("Please remove Unclamp Unit all products");
+                            return;
+                        }
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
                         result = await SingletonManager.instance.Ez_Model.ServoOrigin(Slave.SlaveID);
                         Slave.Color = result ? "PaleGreen" : "White";
@@ -154,11 +172,25 @@ namespace YJ_AutoUnClamp.ViewModels
                         {
                             failedSlavesList.Add(Slave.Name);
                         }
+
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].UnClampStep = Unit_Model.UnClampHandStep.Idle;
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].RtnBtmStep = Unit_Model.ReturnBottomStep.Idle;
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].RtnTopStep = Unit_Model.ReturnTopStep.Idle;
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].UnclampBottomReturnDone = false;
+                        // Return Conveyor Interface Off
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_CV_INTERFACE, false);
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOP_RETURN_CV_INTERFACE, false);
                     }
                         
                     Slave = ServoSlaves[(int)ServoSlave_List.In_Y_Handler_Y];
                     if (Slave.IsChecked == true)
                     {
+                        if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.UNLOAD_Z_GRIP] == true
+                            || Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.UNLOAD_LD_Z_GRIP_CYL] == true)
+                        {
+                            Global.instance.ShowMessagebox("Please proceed after checking if there is a product.");
+                            return;
+                        }
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
                         result = await SingletonManager.instance.Ez_Model.ServoOrigin(Slave.SlaveID);
                         Slave.Color = result ? "PaleGreen" : "White";
@@ -167,6 +199,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         {
                             failedSlavesList.Add(Slave.Name);
                         }
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.In_Y].UnloadYStep = Unit_Model.Unload_Y_Step.Idle;
                     }
                     
                     if (selectedSlaves.Any())
@@ -194,6 +227,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         });
                         // 모든 작업 완료 대기
                         await Task.WhenAll(tasks);
+                        SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Lift_1].LiftStep = Unit_Model.Lift_Step.Idle;
                     }
                     // 실패한 슬레이브가 있는 경우 메시지 표시
                     if (failedSlavesList.Any())

@@ -37,7 +37,7 @@
                 <Label Content="Product Info" Foreground="White" FontSize="13" FontWeight="SemiBold" Padding="0,6" VerticalContentAlignment="Center"/>
             </StackPanel>
             <telerik:RadButton Style="{StaticResource Exit_ButtonStyle}"
-                   Command="{Binding Source={x:Static utils:WindowManager.Instance}, Path=CloseCommand}" CommandParameter="Product Info">
+                   Command="{Binding Source={x:Static utils:WindowManager.Instance}, Path=CloseCommand}" CommandParameter="Product">
                 <telerik:RadGlyph Glyph="&#xe11b;">
                 </telerik:RadGlyph>
             </telerik:RadButton>

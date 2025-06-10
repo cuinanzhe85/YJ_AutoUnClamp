@@ -21,6 +21,7 @@ namespace YJ_AutoUnClamp.Models
             bcr2,
             bcr3,
             Nfc,
+            Mes,
             Max
         }
 
@@ -48,13 +49,19 @@ namespace YJ_AutoUnClamp.Models
             get { return _Barcode; }
             set { SetValue(ref _Barcode, value); }
         }
+        private string _MesResult = string.Empty;
+        public string MesResult
+        {
+            get { return _MesResult; }
+            set { SetValue(ref _MesResult, value); }
+        }
         private string _NfcData = string.Empty;
         public string NfcData
         {
             get { return _NfcData; }
             set { SetValue(ref _NfcData, value); }
         }
-        public bool IsBcrReceived { get; set; } = false;
+        public bool IsReceived { get; set; } = false;
         public SerialPort SerialPort { get; set; } = null;
         public Serial_Model()
         {
@@ -70,7 +77,10 @@ namespace YJ_AutoUnClamp.Models
                 }
                 SerialPort.PortName = Port;
 
-                SerialPort.BaudRate = 115200;
+                if (PortName.Contains("MES"))
+                    SerialPort.BaudRate = 9600;
+                else
+                    SerialPort.BaudRate = 115200;
 
                 SerialPort.DataBits = 8;
                 SerialPort.StopBits = StopBits.One;
@@ -114,7 +124,7 @@ namespace YJ_AutoUnClamp.Models
         public void SendBcrTrig()
         {
             Barcode = string.Empty;
-            IsBcrReceived = false;
+            IsReceived = false;
 
             if (SerialPort.IsOpen == false)
                 return;
@@ -122,7 +132,19 @@ namespace YJ_AutoUnClamp.Models
             Global.Mlog.Info($"{PortName} : {Port} Trig Send");
             SerialPort.Write("+");
         }
-        
+        public void SendMes(string cn)
+        {
+            MesResult = string.Empty;
+            IsReceived = false;
+
+            if (SerialPort.IsOpen == false)
+                return;
+
+            Global.Mlog.Info($"{PortName} : {Port} MES Send '{cn}'");
+            cn += "\r\n"; // MES에 보낼 문자열 끝에 CRLF 추가
+            SerialPort.Write(cn);
+        }
+
         private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             //시리얼 버터에 수신된 데이타를 ReceiveData 읽어오기
@@ -135,7 +157,7 @@ namespace YJ_AutoUnClamp.Models
                     Barcode = Data.Trim();
                     if (!string.IsNullOrEmpty(Barcode))
                     {
-                        IsBcrReceived = true;
+                        IsReceived = true;
                         Global.Mlog.Info($"{PortName} : {Port} Receive '{Barcode}'");
                     }
                 }
@@ -147,7 +169,7 @@ namespace YJ_AutoUnClamp.Models
                         {
                             string[] parts = Data.Split('=');
                             NfcData = parts[1].Trim();
-                            IsBcrReceived = true;
+                            IsReceived = true;
 
                             Global.Mlog.Info($"{PortName} : {Port} Receive '{Data}'");
                         }
@@ -155,6 +177,19 @@ namespace YJ_AutoUnClamp.Models
                     catch
                     {
                     }
+                }
+                else if (PortName.Contains("MES"))
+                {
+                    MesResult = Data.Trim();
+                    if (!string.IsNullOrEmpty(MesResult))
+                    {
+                        Global.Mlog.Info($"{PortName} : {Port} Receive '{MesResult}'");
+                        IsReceived = true;
+                    }
+                }
+                else
+                {
+                    Global.Mlog.Info($"{PortName} : {Port} Receive '{Data}'");
                 }
             }
         }

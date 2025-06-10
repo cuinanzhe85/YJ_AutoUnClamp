@@ -18,8 +18,8 @@ namespace YJ_AutoUnClamp.ViewModels
         #endregion
         public enum InitializeList
         {
-            Unload_Y,
             Unload_Z,
+            Unload_Y,
             UnClamp_X,
             Max
         }
@@ -46,7 +46,7 @@ namespace YJ_AutoUnClamp.ViewModels
             {
                 ServoSlaves.Add(new ServoSlaveViewModel()
                 {
-                    Name = ((ServoSlave_List)i).ToString().Replace("_", " "),
+                    Name = ((InitializeList)i).ToString().Replace("_", " "),
                     Color = "White",
                     SlaveID = i,
                     IsChecked = false
@@ -79,6 +79,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         {
                             BusyContent = "UnClamp X Initializing...";
                             result = await UnclampUnitInit();
+                            slave.Color = result ? "Bisque" : "White";
                             if (!result)
                             {
                                 if (!string.IsNullOrEmpty(failedSlave))
@@ -91,6 +92,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         {
                             BusyContent = "Unload Y Initializing...";
                             result = await ServoUnloadingY();
+                            slave.Color = result ? "Bisque" : "White";
                             if (!result)
                             {
                                 if (!string.IsNullOrEmpty(failedSlave))
@@ -103,6 +105,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         {
                             BusyContent = "Unload Z Initializing...";
                             result = await ServoUnloadingZ();
+                            slave.Color = result ? "Bisque" : "White";
                             if (!result)
                             {
                                 if (!string.IsNullOrEmpty(failedSlave))
@@ -220,6 +223,8 @@ namespace YJ_AutoUnClamp.ViewModels
                 {
                     if (Ez_Model.MoveReadyPosY() == false)
                         result = false;
+                    else
+                        result = true;
                     sw.Restart();
                     while (result)
                     {

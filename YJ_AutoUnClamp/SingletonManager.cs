@@ -310,6 +310,17 @@ namespace YJ_AutoUnClamp
                         massage += nfcPort + "NFC Open Fail Port open fail.\r\n";
                     continue;
                 }
+                else if (i == (int)Serial_Model.SerialIndex.Mes)
+                {
+                    // MES Port Open
+                    key = "MES_PORT";
+                    string nfcPort = myIni.Read(key, section);
+                    SerialModel[i].PortName = key;
+                    SerialModel[i].Port = nfcPort;
+                    if (SerialModel[i].Open() == false)
+                        massage += nfcPort + "MES Open Fail Port open fail.\r\n";
+                    continue;
+                }
                 else
                 {
                     key = $"BARCODE_PORT_{i + 1}";
@@ -505,7 +516,7 @@ namespace YJ_AutoUnClamp
                                 || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_LEFT_DOOR])
                                 {
                                     Global.instance.SafetyErrorMessage = "DOOR IS OPEN ! ";
-
+                                    
                                     IsSafetyInterLock = true;
                                 }
                                 else
@@ -517,8 +528,19 @@ namespace YJ_AutoUnClamp
                                             || i == (int)MotionUnit_List.Lift_1
                                             || i == (int)MotionUnit_List.In_CV
                                             || i == (int)MotionUnit_List.Out_CV)
-
+                                        {
                                             Unit_Model[i].Loop();
+                                            // Unclamp Mes Error
+                                            if (!string.IsNullOrEmpty(Unit_Model[i].UnclampSetFailMessage))
+                                            {
+                                                Global.instance.Set_TowerLaamp(Global.TowerLampType.Error);
+                                                Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+                                                Global.instance.ShowMessagebox(Unit_Model[i].UnclampSetFailMessage);
+                                                Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+                                                Global.instance.InspectionStop();
+                                            }
+                                        }
+                                            
                                         Thread.Sleep(5);
                                     }
                                    Global.instance.UnLoadingTactTimeEnd();

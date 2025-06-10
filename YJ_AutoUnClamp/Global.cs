@@ -319,7 +319,6 @@ namespace YJ_AutoUnClamp
                 // Tower Lamp Start
                 Set_TowerLaamp(TowerLampType.Start);
 
-
                 // Inspection Thread Start
                 SendMainUiLog($"Inspection Start [ {SingletonManager.instance.EquipmentMode} Mode ]");
                 Mlog.Info($"{SingletonManager.instance.EquipmentMode.ToString()} Run Inspection Start.");

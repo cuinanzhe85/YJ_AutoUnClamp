@@ -420,6 +420,7 @@ namespace YJ_AutoUnClamp.Models
                 }
                 await Task.Delay(10);
             }
+            sw.Restart();
             // Z up
             if (iSlaveNo == (int)ServoSlave_List.In_Z_Handler_Z)
             {
@@ -428,11 +429,14 @@ namespace YJ_AutoUnClamp.Models
                     double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Ready).ToString()];
                     pos = Math.Round(pos, 2);
                     MoveABS(iSlaveNo, pos);
+                    
                     while(true)
                     {
                         double GetPos = Math.Round(SingletonManager.instance.Ez_Model.GetActualPos((int)(ServoSlave_List.In_Z_Handler_Z)), 2);
                         if (GetPos == pos)
                             break ;
+                        if (sw.ElapsedMilliseconds > 5000)
+                            return false;
                         Thread.Sleep(10);
                     }
                 }
@@ -451,6 +455,8 @@ namespace YJ_AutoUnClamp.Models
                             break;
                         Thread.Sleep(10);
                     }
+                    if (sw.ElapsedMilliseconds > 5000)
+                        return false;
                 }
             }
             else if(iSlaveNo == (int)ServoSlave_List.In_Y_Handler_Y)
@@ -467,6 +473,8 @@ namespace YJ_AutoUnClamp.Models
                             break;
                         Thread.Sleep(10);
                     }
+                    if (sw.ElapsedMilliseconds > 10000)
+                        return false;
                 }
             }
             return true;
@@ -773,21 +781,20 @@ namespace YJ_AutoUnClamp.Models
                 return true;
             return false;
         }
+        public bool ServoMovePause(int Slave, int StartStop)
+        {
+            int nRtn = EziMOTIONPlusELib.FAS_MovePause(Slave, StartStop);
+            if (nRtn != EziMOTIONPlusELib.FMM_OK)
+            {
+                string strMsg = "FAS_MovePause() \nReturned: " + nRtn.ToString();
+                return false;
+            }
+            else
+                return true;
+        }
         private double GetPickUpFloorPos()
         {
             double pos=0;
-            
-            //for (int i = 0; i<(int)Floor_Index.Max; i++)
-            //{
-            //    if (SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] == i)
-            //    {
-            //        int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] - 1;
-            //        pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Unload_1 + floor).ToString()];
-            //        // 소수점아래 2자리까지비교
-            //        pos = Math.Round(pos, 2);
-            //        return pos;
-            //    }
-            //}
             int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] - 1;
             pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Unload_1 + floor).ToString()];
             pos = Math.Round(pos, 2);

@@ -518,7 +518,9 @@ namespace YJ_AutoUnClamp.ViewModels
             string section = obj.ToString();
             if (section == "Lift")
             {
-                iniFile.Write($"{((Teaching_List)(TeachingIndex + (Selected_LiftIndex * 3))).ToString()}", Current_Position[(int)ServoTarget.Z], section);
+                double pos = Convert.ToDouble(Current_Position[(int)ServoTarget.Z]);
+                pos = Math.Round(pos,2);
+                iniFile.Write($"{((Teaching_List)(TeachingIndex + (Selected_LiftIndex * 3))).ToString()}", pos.ToString(), section);
                 TeachPosition[(int)TeachingSection.Lift] = Current_Position[(int)ServoTarget.Z];
                 SingletonManager.instance.Teaching_Data[((Teaching_List)TeachingIndex + (Selected_LiftIndex * 3)).ToString()] = Current_Position[(int)ServoTarget.Z];
             }
@@ -543,17 +545,21 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         private void OnTeachingMove_Command(object obj)
         {
-            if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
-            {
-                return;
-            }
             string cmd = obj.ToString();
             switch (cmd)
             {
                 case "Top_X":
+                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
                     EzModel.MoveABS((int)ServoSlave_List.Top_X_Handler_X, TeachPosition[(int)TeachingSection.Top_X]);
                     break;
                 case "In_Y":
+                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
                     if (EzModel.IsMoveReadyPosZ() == false)
                     {
                         MessageBox.Show("Z is not ready position.", "Servo Move", MessageBoxButton.OK);
@@ -562,9 +568,17 @@ namespace YJ_AutoUnClamp.ViewModels
                     EzModel.MoveABS((int)ServoSlave_List.In_Y_Handler_Y, TeachPosition[(int)TeachingSection.In_Y]);
                     break;
                 case "In_Z":
+                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
                     EzModel.MoveABS((int)ServoSlave_List.In_Z_Handler_Z, TeachPosition[(int)TeachingSection.In_Z]);
                     break;
                 case "Lift":
+                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
                     EzModel.MoveABS((int)ServoSlave_List.Lift_1_Z + Selected_LiftIndex, TeachPosition[(int)TeachingSection.Lift]);
                     break;
             }

@@ -24,8 +24,6 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             if (MessageBox.Show($"Do you want to reset the production quantity?", "Product", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
             {
-                Channels[0].InputCount = "11";
-                Channels[0].UnLoadCount = "21";
                 return;
             }
             Channels[0].InputCount = "0";

@@ -351,7 +351,8 @@
                                    Command="{Binding RightMenu_PopupCommand}" CommandParameter="Origin"/>
                 <telerik:RadButton Content="IO Monitoring" Style="{StaticResource AutoView_ButtonStyle}"
                                    Command="{Binding RightMenu_PopupCommand}" CommandParameter="Dio"/>
-                <telerik:RadButton Content="Product Info" Background="MediumSeaGreen" Style="{StaticResource AutoView_ButtonStyle}"/>
+                <telerik:RadButton Content="Product Info" Background="MediumSeaGreen" Style="{StaticResource AutoView_ButtonStyle}"
+                                   Command="{Binding RightMenu_PopupCommand}" CommandParameter="Info"/>
                 <telerik:RadButton Command="{Binding RightMenu_PopupCommand}" CommandParameter="Safety"
                                    Background="#FFDE00" Foreground="Black" Style="{StaticResource AutoView_ButtonStyle}">
                     <StackPanel Orientation="Horizontal">

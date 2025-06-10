@@ -17,7 +17,7 @@ namespace YJ_AutoUnClamp.ViewModels
     {
         #region // ICommands
         public ICommand Save_Command { get; private set; }
-        public ICommand BcrPort_Command { get; private set; }
+        public ICommand ComPort_Command { get; private set; }
         public ICommand TCP_Command { get; private set; }
         #endregion
         private ObservableCollection<string> _PortNames = new ObservableCollection<string>();
@@ -32,17 +32,23 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _bcrData; }
             set { SetValue(ref _bcrData, value); }
         }
-        private string[] _BarCodePort = new string[(int)SerialIndex.Max];
-        public string[] BarCodePort
+        private string[] _SetComPort = new string[(int)SerialIndex.Max];
+        public string[] SetComPort
         {
-            get { return _BarCodePort; }
-            set { SetValue(ref _BarCodePort, value); }
+            get { return _SetComPort; }
+            set { SetValue(ref _SetComPort, value); }
         }
         private string _NfcData;
         public string NfcData
         {
             get { return _NfcData; }
             set { SetValue(ref _NfcData, value); }
+        }
+        private string _MesData;
+        public string MesData
+        {
+            get { return _MesData; }
+            set { SetValue(ref _MesData, value); }
         }
         private string _TcpSendData;
         public string TcpSendData
@@ -63,10 +69,10 @@ namespace YJ_AutoUnClamp.ViewModels
             foreach (string port in ports)
                 PortNames.Add(port);
 
-            BarCodePort = new string[(int)SerialIndex.Max];
+            SetComPort = new string[(int)SerialIndex.Max];
             for (int i = 0; i < (int)SerialIndex.Max; i++)
             {
-                BarCodePort[i] = SingletonManager.instance.SerialModel[i].Port;
+                SetComPort[i] = SingletonManager.instance.SerialModel[i].Port;
                 bcrData.Add("Empty");
             }
                 
@@ -89,18 +95,26 @@ namespace YJ_AutoUnClamp.ViewModels
                     if (i == (int)SerialIndex.Nfc)
                     {
                         key = $"NFC_PORT";
-                        myIni.Write(key, BarCodePort[i], Section);
-                        Global.Mlog.Info($" {key} = " + BarCodePort[i]);
+                        myIni.Write(key, SetComPort[i], Section);
+                        Global.Mlog.Info($" {key} = " + SetComPort[i]);
                         SingletonManager.instance.SerialModel[i].PortName = key;
-                        SingletonManager.instance.SerialModel[i].Port = BarCodePort[i];
+                        SingletonManager.instance.SerialModel[i].Port = SetComPort[i];
+                    }
+                    else if (i == (int)SerialIndex.Mes)
+                    {
+                        key = $"MES_PORT";
+                        myIni.Write(key, SetComPort[i], Section);
+                        Global.Mlog.Info($" {key} = " + SetComPort[i]);
+                        SingletonManager.instance.SerialModel[i].PortName = key;
+                        SingletonManager.instance.SerialModel[i].Port = SetComPort[i];
                     }
                     else
                     {
                         key = $"BARCODE_PORT_{i + 1}";
-                        myIni.Write(key, BarCodePort[i], Section);
-                        Global.Mlog.Info($" {key} = " + BarCodePort[i]);
+                        myIni.Write(key, SetComPort[i], Section);
+                        Global.Mlog.Info($" {key} = " + SetComPort[i]);
                         SingletonManager.instance.SerialModel[i].PortName = key;
-                        SingletonManager.instance.SerialModel[i].Port = BarCodePort[i];
+                        SingletonManager.instance.SerialModel[i].Port = SetComPort[i];
                     }
                 }
             }
@@ -110,37 +124,59 @@ namespace YJ_AutoUnClamp.ViewModels
                 Global.instance.ShowMessagebox("Save Fail.");
             }
         }
-        public async void OnBcrPort_Command(object obj)
+        public async void OnComPort_Command(object obj)
         {
             switch (obj.ToString())
             {
                 case "BcrPort1":
-                    SingletonManager.instance.SerialModel[0].PortName = "BARCODE_PORT_1";
-                    SingletonManager.instance.SerialModel[0].Open();
+                    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr1].PortName = "BARCODE_PORT_1";
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr1].Open() == true)
+                        MessageBox.Show("BCR 1 Port Open Success.");
+                    else
+                        MessageBox.Show("BCR 1 Port Open Fail.");
                     break;
                 case "BcrPort2":
-                    SingletonManager.instance.SerialModel[1].PortName = "BARCODE_PORT_2";
-                    SingletonManager.instance.SerialModel[1].Open();
+                    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr2].PortName = "BARCODE_PORT_2";
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr2].Open() == true)
+                        MessageBox.Show("BCR 2 Port Open Success.");
+                    else
+                        MessageBox.Show("BCR 2 Port Open Fail.");
                     break;
                 case "BcrPort3":
-                    SingletonManager.instance.SerialModel[2].PortName = "BARCODE_PORT_3";
-                    SingletonManager.instance.SerialModel[2].Open();
+                    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr3].PortName = "BARCODE_PORT_3";
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr3].Open() == true)
+                        MessageBox.Show("BCR 3 Port Open Success.");
+                    else
+                        MessageBox.Show("BCR 3 Port Open Fail.");
                     break;
                 case "NfcPort":
-                    SingletonManager.instance.SerialModel[3].PortName = "NFC_PORT";
-                    SingletonManager.instance.SerialModel[3].Open();
+                    SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].PortName = "NFC_PORT";
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].Open() == true)
+                        MessageBox.Show("NFC Port Open Success.");
+                    else
+                        MessageBox.Show("NFC Port Open Fail.");
+                    break;
+                case "MesPort":
+                    SingletonManager.instance.SerialModel[(int)SerialIndex.Mes].PortName = "MES_PORT";
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.Mes].Open()==true)
+                        MessageBox.Show("MES Port Open Success.");
+                    else
+                        MessageBox.Show("MES Port Open Fail.");
                     break;
                 case "BcrTest1":
-                    await BcrData_Triger(0);
+                    await BcrData_Triger((int)SerialIndex.bcr1);
                     break;
                 case "BcrTest2":
-                    await BcrData_Triger(1);
+                    await BcrData_Triger((int)SerialIndex.bcr2);
                     break;
                 case "BcrTest3":
-                    await BcrData_Triger(2);
+                    await BcrData_Triger((int)SerialIndex.bcr3);
                     break;
                 case "NfcTest":
                     await NFC_DataRead();
+                    break;
+                case "MesTest":
+                    await MesTest();
                     break;
             }
         }
@@ -198,7 +234,7 @@ namespace YJ_AutoUnClamp.ViewModels
                 sw.Restart();
                 while (true)
                 {
-                    if (SingletonManager.instance.SerialModel[index].IsBcrReceived == true)
+                    if (SingletonManager.instance.SerialModel[index].IsReceived == true)
                     {
                         bcrData[index] = SingletonManager.instance.SerialModel[index].Barcode;
                         break;
@@ -206,6 +242,30 @@ namespace YJ_AutoUnClamp.ViewModels
                     if (sw.ElapsedMilliseconds > 1500)
                     {
                         MessageBox.Show("BCR Barcode read fail.", "BCR");
+                        break;
+                    }
+                }
+            });
+        }
+        private async Task MesTest()
+        {
+            if (SingletonManager.instance.SerialModel[(int)SerialIndex.Mes].IsConnected != true)
+                return;
+            SingletonManager.instance.SerialModel[(int)SerialIndex.Mes].SendMes(MesData);
+            await Task.Run(() =>
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Restart();
+                while (true)
+                {
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.Mes].IsReceived == true)
+                    {
+                        MessageBox.Show($"MES Receive : {SingletonManager.instance.SerialModel[(int)SerialIndex.Mes].MesResult}", "MES");
+                        break;
+                    }
+                    if (sw.ElapsedMilliseconds > 1500)
+                    {
+                        MessageBox.Show("MES Receive Timeout.", "MES");
                         break;
                     }
                 }
@@ -222,7 +282,7 @@ namespace YJ_AutoUnClamp.ViewModels
                 sw.Restart();
                 while (true)
                 {
-                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].IsBcrReceived == true)
+                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].IsReceived == true)
                     {
                         NfcData = SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NfcData;
                         Global.Mlog.Info($"NFC Read : {NfcData}");
@@ -241,13 +301,14 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             base.InitializeCommands();
             Save_Command = new RelayCommand(OnSave_Command);
-            BcrPort_Command = new RelayCommand(OnBcrPort_Command);
+            ComPort_Command = new RelayCommand(OnComPort_Command);
             TCP_Command = new RelayCommand(OnTCP_Command);
         }
         protected override void DisposeManaged()
         {
             Save_Command = null;
-            BcrPort_Command = null;
+            ComPort_Command = null;
+            TCP_Command = null;
             base.DisposeManaged();
         }
         #endregion

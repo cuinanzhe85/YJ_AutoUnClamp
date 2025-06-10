@@ -76,6 +76,8 @@ namespace YJ_AutoUnClamp.Models
         private bool _isLoopRunning = false;
         public bool UnloadYPutDownMoving=false;
         public bool UnclampBottomReturnDone = false;
+
+        public string UnclampSetFailMessage = string.Empty;
         Stopwatch _TimeDelay = new Stopwatch();
         // Steps
         public enum UnClampHandStep
@@ -97,11 +99,11 @@ namespace YJ_AutoUnClamp.Models
             Top_Hand_PutDown_Check,
             Top_Hand_UnGrip_Check,
             Top_Hand_PutDown_Up_Check,
+            Set_MES_Send,
+            Set_MES_Result_Wait,
             Set_Hand_PutDown,
             set_Hand_PutDown_Check,
-            Set_Hand_PutDown_Up_Check,
-            Set_Http_Request_Send,
-            Set_Http_Result_Wait
+            Set_Hand_PutDown_Up_Check
         }
         public enum ReturnBottomStep
         {
@@ -444,22 +446,81 @@ namespace YJ_AutoUnClamp.Models
 
                         Global.Mlog.Info($"UnClampHandStep => Left Z Up");
                         UnClampStep = UnClampHandStep.Top_Hand_PutDown_Up_Check;
-                        Global.Mlog.Info($"UnClampHandStep => Top_Hand_PutDown_Up_Check");
+                        Global.Mlog.Info($"UnClampHandStep => Nest Step : Top_Hand_PutDown_Up_Check");
                     }
                     break;
                 case UnClampHandStep.Top_Hand_PutDown_Up_Check:
                     // top hand up완료하면 Set Hand Down 조건 확인으로 넘어간다.
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true)
-                        UnClampStep = UnClampHandStep.Set_Hand_PutDown;
+                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true
+                        && Dio.DI_RAW_DATA[(int)DI_MAP.REAR_INTERFACE_1] == false)
+                        || _NoneSetTest == true
+                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => NFC Use Setting : {SingletonManager.instance.SystemModel.NfcUseNotUse}");
+                        if (SingletonManager.instance.SystemModel.NfcUseNotUse == "Use")
+                        {
+                            UnClampStep = UnClampHandStep.Set_MES_Send;
+                            Global.Mlog.Info($"UnClampHandStep => Set_MES_Send");
+                        }
+                        else
+                        {
+                            UnClampStep = UnClampHandStep.Set_Hand_PutDown;
+                            Global.Mlog.Info($"UnClampHandStep => Set_Hand_PutDown");
+                        }
+                    }
+                    break;
+                case UnClampHandStep.Set_MES_Send:
+                    //if (!string.IsNullOrEmpty(SingletonManager.instance.Nfc_Data))
+                    string nfc = SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Nfc].NfcData;
+                    Global.Mlog.Info($"UnClampHandStep => NFC Data : {nfc}");
+                    if (!string.IsNullOrEmpty(nfc))
+                    {
+                        //SingletonManager.instance.HttpJsonModel.SendRequest("saveInspInfo", nfc, "PASS");
+                        SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Mes].SendMes(nfc);
+                        UnClampStep = UnClampHandStep.Set_MES_Result_Wait;
+                        Global.Mlog.Info($"UnClampHandStep => Next Step : Set_MES_Result_Wait");
+                        _TimeDelay.Restart();
+                    }
+                    else
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => NFC Data is Empty");
+                        UnclampSetFailMessage = "NFC Data is Empty";
+                        UnClampStep = UnClampHandStep.Idle;
+                    }
+                    break;
+                case UnClampHandStep.Set_MES_Result_Wait:
+                    if (SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Nfc].IsReceived == true)
+                    {
+                        Global.Mlog.Info($"UnClampHandStep => MES Reveive : {SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Nfc].MesResult}");
+                        if (SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Nfc].MesResult == "PASS")
+                        {
+                            Global.Mlog.Info($"UnClampHandStep => MES Result : PASS");
+
+                            UnClampStep = UnClampHandStep.Set_Hand_PutDown;
+                            Global.Mlog.Info($"UnClampHandStep => Next Step : Set_Hand_PutDown");
+                        }
+                        else
+                        {
+                            Global.Mlog.Info($"UnClampHandStep => MES Result : FAIL");
+                            UnclampSetFailMessage = "MES Result : FAIL";
+                            UnClampStep = UnClampHandStep.Idle;
+                            Global.Mlog.Info($"UnClampHandStep => Next Step : Idle");
+                        }
+                    }
+                    else if (_TimeDelay.ElapsedMilliseconds > 2000)
+                    {
+                        UnclampSetFailMessage = "MES Result Receive Timeout.";
+                        UnClampStep = UnClampHandStep.Idle;
+                        Global.Mlog.Info($"UnClampHandStep => Next Step : Idle");
+                    }
+                    if (_TimeDelay.ElapsedMilliseconds == 0)
+                        _TimeDelay.Restart();
                     break;
                 case UnClampHandStep.Set_Hand_PutDown:
                     // set putdown 위치에 제품이 없으면 & Return 되있으면 down
                     /*조건 확인 필요, 인터페이 신호가 있을꺼 같음*/
                     /***************************************************/
-                    if ((Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_LEFT_Z_UP_CYL] == true
-                        && Dio.DI_RAW_DATA[(int)DI_MAP.REAR_INTERFACE_1] == false)
-                        || _NoneSetTest == true
-                        || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.OUT_PP_RIGHT_TURN] == true)
                     {
                         Global.Mlog.Info($"UnClampHandStep => SET Rirht PutDown Z Down");
                         Dio_Output(DO_MAP.UNCLAMP_RIGHT_Z_DOWN, true);
@@ -486,48 +547,11 @@ namespace YJ_AutoUnClamp.Models
                     {
                         Global.Mlog.Info($"UnClampHandStep => SET Right Z BLOW Off");
                         Dio_Output(DO_MAP.OUT_PP_RIGHT_Z_BLOW, false);
-                        if (SingletonManager.instance.SystemModel.NfcUseNotUse == "Use")
-                        {
-                            UnClampStep = UnClampHandStep.Set_Http_Request_Send;
-                            Global.Mlog.Info($"UnClampHandStep => Set_Http_Request_Send");
-                        }
-                        else
-                        {
-                            UnClampStep = UnClampHandStep.Idle;
-                            Global.Mlog.Info($"UnClampHandStep => Idle");
-                        }
-                    }
-                    break;
-                case UnClampHandStep.Set_Http_Request_Send:
-                    //if (!string.IsNullOrEmpty(SingletonManager.instance.Nfc_Data))
-                    string nfc = SingletonManager.instance.SerialModel[(int)Serial_Model.SerialIndex.Nfc].NfcData;
-                    Global.Mlog.Info($"UnClampHandStep => NFC Data : {nfc}");
-                    if (!string.IsNullOrEmpty(nfc))
-                    {
-                        SingletonManager.instance.HttpJsonModel.SendRequest("saveInspInfo", nfc, "PASS");
-                        UnClampStep = UnClampHandStep.Set_Http_Result_Wait;
-                    }
-                    else
-                    {
-                        Global.Mlog.Info($"UnClampHandStep => NFC Data is Empty");
                         UnClampStep = UnClampHandStep.Idle;
+                        Global.Mlog.Info($"UnClampHandStep => Idle");
                     }
                     break;
-                case UnClampHandStep.Set_Http_Result_Wait:
-                    if (SingletonManager.instance.HttpJsonModel.DataSendFlag == true)
-                    {
-                        Global.Mlog.Info($"UnClampHandStep => rsltCode : {SingletonManager.instance.HttpJsonModel.ResultCode}");
-                        if (SingletonManager.instance.HttpJsonModel.ResultCode == "PASS")
-                        {
-                            Global.Mlog.Info($"UnClampHandStep => NFC Result : PASS");
-                        }
-                        else
-                        {
-                            Global.Mlog.Info($"UnClampHandStep => NFC Result : FAIL");
-                        }
-                        UnClampStep = UnClampHandStep.Idle;
-                    }
-                    break;
+                
             }
             int step = (int)UnClampStep;
             Global.instance.Write_Sequence_Log("UNCLAMP_STEP", step.ToString());
@@ -1091,7 +1115,7 @@ namespace YJ_AutoUnClamp.Models
                 case Lift_Step.Clamp_BarCode_Read_Done:
                     if (_TimeDelay.ElapsedMilliseconds < 1000)
                     {
-                        if (SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].IsBcrReceived == true)
+                        if (SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].IsReceived == true)
                         {
                             Global.Mlog.Info($"Lift_Step => Barcode Read OK");
                             Global.Mlog.Info($"Lift_Step => Barcode : {SingletonManager.instance.SerialModel[SingletonManager.instance.UnLoadStageNo].Barcode}");
@@ -1384,6 +1408,8 @@ namespace YJ_AutoUnClamp.Models
                     {
                         Global.Mlog.Info($"Unload_Y_Step => IsMoveReadyPosZ Done");
                         Global.Mlog.Info($"Unload_Y_Step => PickUp_Stage_Check");
+                        if( Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_GRIP_CYL] == true)
+                            Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, false);
                         UnloadYStep = Unload_Y_Step.PickUp_Stage_Check;
                     }
                     break;
