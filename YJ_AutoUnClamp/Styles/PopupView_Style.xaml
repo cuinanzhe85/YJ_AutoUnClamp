@@ -187,7 +187,7 @@
     <Style TargetType="Button" x:Key="Origin_ButtonStyle">
         <Setter Property="Margin" Value="5, 10"/>
         <Setter Property="Focusable" Value="False"/>
-        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontSize" Value="25"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="Black"/>
         <Setter Property="Background" Value="LightSteelBlue"/>
@@ -266,5 +266,13 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="White"/>
         <Setter Property="telerik:CornerRadiusHelper.ClipRadius" Value="8"/>
+    </Style>
+    <Style TargetType="telerik:RadButton" x:Key="Number_ButtonStyle">
+        <Setter Property="Grid.Column" Value="3"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="5"/>
+        <Setter Property="FontSize" Value="25"/>
+        <Setter Property="Focusable" Value="True"/>
+        <Setter Property="telerik:StyleManager.Theme" Value="Crystal"/>
     </Style>
 </ResourceDictionary>

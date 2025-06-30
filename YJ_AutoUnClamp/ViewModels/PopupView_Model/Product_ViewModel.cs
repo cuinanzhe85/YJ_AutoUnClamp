@@ -32,7 +32,7 @@ namespace YJ_AutoUnClamp.ViewModels
             var myIni = new IniFile(Global.instance.IniSystemPath);
             string section = "SYSTEM";
             myIni.Write("INPUT_COUNT", Channels[0].InputCount, section);
-            myIni.Write("LOAD_COUNT", Channels[0].UnLoadCount, section);
+            myIni.Write("UNLOAD_COUNT", Channels[0].UnLoadCount, section);
         }
         #region override
         protected override void InitializeCommands()

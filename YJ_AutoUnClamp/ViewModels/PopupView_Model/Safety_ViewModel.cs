@@ -1,8 +1,6 @@
 ﻿using Common.Commands;
 using Common.Mvvm;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using YJ_AutoUnClamp.Models;
 using YJ_AutoUnClamp.Utils;
@@ -15,11 +13,12 @@ namespace YJ_AutoUnClamp.ViewModels
         public ICommand PreventCloseCommand { get; private set; }
         public ICommand DioSetCommand { get; private set; }
 
-        private EziDio_Model _Dio { get; set; } = SingletonManager.instance.Ez_Dio;
+        private EziDio_Model _Dio { get; set; } = SingletonManager.instance.Dio;
         public EziDio_Model Dio
         {
             get { return _Dio; }
         }
+        private EzMotion_Model_E Motion { get; set; } = SingletonManager.instance.Ez_Model;
         private bool _IsTopmost = true;
         public bool IsTopmost
         {
@@ -29,26 +28,27 @@ namespace YJ_AutoUnClamp.ViewModels
         public Safety_ViewModel()
         {
             Global.Mlog.InfoFormat($"Safety Popup Open.");
-            Global.instance.Set_TowerLaamp(Global.TowerLampType.Error);
-            SingletonManager.instance.Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+            Global.instance.Set_TowerLamp(Global.TowerLampType.Error);
+            Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+
+            Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_START, false);
+            Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_STOP, false);
+            Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_RESET, true);
+
+            Motion.ServoMovePause((int)ServoSlave_List.In_Y_Handler_Y, 1);
+            Motion.ServoMovePause((int)ServoSlave_List.In_Z_Handler_Z, 1);
+            Motion.ServoMovePause((int)ServoSlave_List.Top_X_Handler_X, 1);
         }
-        private async void OnDioSetCommand(object obj)
+        private void OnDioSetCommand(object obj)
         {
             string cmd = obj.ToString();
             // Buzzer Y07
             if (cmd == "Buzzer")
             {
-                if (SingletonManager.instance.Ez_Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.BUZZER] == false)
-                    SingletonManager.instance.Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+                if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.BUZZER] == false)
+                    Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
                 else
-                    SingletonManager.instance.Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
-            }
-            // Reset Y03
-            else
-            {
-                SingletonManager.instance.Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_RESET, true);
-                await Task.Delay(3000); // 비동기 대기
-                SingletonManager.instance.Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_RESET, false);
+                    Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
             }
         }
         private void OnPreventClose(object obj) { }
@@ -63,8 +63,14 @@ namespace YJ_AutoUnClamp.ViewModels
                 Global.instance.ShowMessagebox("SAFETY_PLC_POWER_OFF. Please Reset Swich Push.", false);
                 return;
             }
-            SingletonManager.instance.Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+            Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+            Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_RESET, false);
             Global.instance.InspectionStop();
+
+            Motion.ServoMovePause((int)ServoSlave_List.In_Y_Handler_Y, 0);
+            Motion.ServoMovePause((int)ServoSlave_List.In_Z_Handler_Z, 0);
+            Motion.ServoMovePause((int)ServoSlave_List.Top_X_Handler_X, 0);
+
             // Exit
             Global.instance.SafetyErrorMessage = string.Empty;
             WindowManager.Instance.CloseCommand.Execute("Safety");

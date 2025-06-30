@@ -79,11 +79,11 @@
                         Command="{Binding Servo_Command}" CommandParameter="On"/>
                 <Button Grid.Column="2" Content="Servo Off" Style="{StaticResource Origin_ButtonStyle}" 
                         Command="{Binding Servo_Command}" CommandParameter="Off"/>
-                <Button Grid.Column="3" Content="Alarm Reset" Style="{StaticResource Origin_ButtonStyle}" 
+                <Button Grid.Column="3" Content="Alarm&#x0a;Reset" Style="{StaticResource Origin_ButtonStyle}" 
                         Command="{Binding Servo_Command}" CommandParameter="AlarmReset"/>
                 <Button Grid.Column="4" Content="Origin" Style="{StaticResource Origin_ButtonStyle}" 
                         Command="{Binding Servo_Command}" CommandParameter="Origin"/>
-                <Button Grid.Column="5" Content="Exit" Style="{StaticResource Origin_ButtonStyle}"
+                <Button Grid.Column="5" Content="Exit" Style="{StaticResource Origin_ButtonStyle}" Background="PaleVioletRed"
                         Command="{Binding Source={x:Static utils:WindowManager.Instance}, Path=CloseCommand}" CommandParameter="Origin"/>
             </Grid>
         </Border>

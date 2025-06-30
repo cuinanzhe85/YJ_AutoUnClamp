@@ -1,14 +1,11 @@
 ﻿using Common.Commands;
 using Common.Managers;
-using Common.Mvvm;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Xml.Linq;
 using static YJ_AutoUnClamp.Models.Serial_Model;
 
 namespace YJ_AutoUnClamp.ViewModels
@@ -108,14 +105,14 @@ namespace YJ_AutoUnClamp.ViewModels
                         SingletonManager.instance.SerialModel[i].PortName = key;
                         SingletonManager.instance.SerialModel[i].Port = SetComPort[i];
                     }
-                    else
-                    {
-                        key = $"BARCODE_PORT_{i + 1}";
-                        myIni.Write(key, SetComPort[i], Section);
-                        Global.Mlog.Info($" {key} = " + SetComPort[i]);
-                        SingletonManager.instance.SerialModel[i].PortName = key;
-                        SingletonManager.instance.SerialModel[i].Port = SetComPort[i];
-                    }
+                    //else
+                    //{
+                    //    key = $"BARCODE_PORT_{i + 1}";
+                    //    myIni.Write(key, SetComPort[i], Section);
+                    //    Global.Mlog.Info($" {key} = " + SetComPort[i]);
+                    //    SingletonManager.instance.SerialModel[i].PortName = key;
+                    //    SingletonManager.instance.SerialModel[i].Port = SetComPort[i];
+                    //}
                 }
             }
             catch(Exception e)
@@ -128,27 +125,27 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             switch (obj.ToString())
             {
-                case "BcrPort1":
-                    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr1].PortName = "BARCODE_PORT_1";
-                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr1].Open() == true)
-                        MessageBox.Show("BCR 1 Port Open Success.");
-                    else
-                        MessageBox.Show("BCR 1 Port Open Fail.");
-                    break;
-                case "BcrPort2":
-                    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr2].PortName = "BARCODE_PORT_2";
-                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr2].Open() == true)
-                        MessageBox.Show("BCR 2 Port Open Success.");
-                    else
-                        MessageBox.Show("BCR 2 Port Open Fail.");
-                    break;
-                case "BcrPort3":
-                    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr3].PortName = "BARCODE_PORT_3";
-                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr3].Open() == true)
-                        MessageBox.Show("BCR 3 Port Open Success.");
-                    else
-                        MessageBox.Show("BCR 3 Port Open Fail.");
-                    break;
+                //case "BcrPort1":
+                //    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr1].PortName = "BARCODE_PORT_1";
+                //    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr1].Open() == true)
+                //        MessageBox.Show("BCR 1 Port Open Success.");
+                //    else
+                //        MessageBox.Show("BCR 1 Port Open Fail.");
+                //    break;
+                //case "BcrPort2":
+                //    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr2].PortName = "BARCODE_PORT_2";
+                //    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr2].Open() == true)
+                //        MessageBox.Show("BCR 2 Port Open Success.");
+                //    else
+                //        MessageBox.Show("BCR 2 Port Open Fail.");
+                //    break;
+                //case "BcrPort3":
+                //    SingletonManager.instance.SerialModel[(int)SerialIndex.bcr3].PortName = "BARCODE_PORT_3";
+                //    if (SingletonManager.instance.SerialModel[(int)SerialIndex.bcr3].Open() == true)
+                //        MessageBox.Show("BCR 3 Port Open Success.");
+                //    else
+                //        MessageBox.Show("BCR 3 Port Open Fail.");
+                //    break;
                 case "NfcPort":
                     SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].PortName = "NFC_PORT";
                     if (SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].Open() == true)
@@ -163,15 +160,15 @@ namespace YJ_AutoUnClamp.ViewModels
                     else
                         MessageBox.Show("MES Port Open Fail.");
                     break;
-                case "BcrTest1":
-                    await BcrData_Triger((int)SerialIndex.bcr1);
-                    break;
-                case "BcrTest2":
-                    await BcrData_Triger((int)SerialIndex.bcr2);
-                    break;
-                case "BcrTest3":
-                    await BcrData_Triger((int)SerialIndex.bcr3);
-                    break;
+                //case "BcrTest1":
+                //    await BcrData_Triger((int)SerialIndex.bcr1);
+                //    break;
+                //case "BcrTest2":
+                //    await BcrData_Triger((int)SerialIndex.bcr2);
+                //    break;
+                //case "BcrTest3":
+                //    await BcrData_Triger((int)SerialIndex.bcr3);
+                //    break;
                 case "NfcTest":
                     await NFC_DataRead();
                     break;
@@ -276,7 +273,9 @@ namespace YJ_AutoUnClamp.ViewModels
             if (SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].IsConnected != true)
                 return;
             NfcData = "";
-            await Task.Run(() =>
+            SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].IsReceived = false;
+            SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NfcData = string.Empty; 
+            await Task.Run(async () =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
                 sw.Restart();
@@ -288,11 +287,12 @@ namespace YJ_AutoUnClamp.ViewModels
                         Global.Mlog.Info($"NFC Read : {NfcData}");
                         break;
                     }
-                    if (sw.ElapsedMilliseconds > 10000)
+                    if (sw.ElapsedMilliseconds > 5000)
                     {
                         MessageBox.Show("NFC read fail.", "NFC");
                         break;
                     }
+                    await Task.Delay(100); // Wait for 100ms before checking again
                 }
             });
         }

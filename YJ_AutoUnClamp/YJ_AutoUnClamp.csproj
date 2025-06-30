@@ -172,10 +172,6 @@
     <Compile Include="Models\EziDio_Model.cs" />
     <Compile Include="Models\EzMotion_Model_E.cs" />
     <Compile Include="Models\EzMotion_Model_R.cs" />
-    <Compile Include="Models\HidHook_Model.cs" />
-    <Compile Include="Models\HttpJson_Model.cs" />
-    <Compile Include="Models\Http_Model.cs" />
-    <Compile Include="Models\NFC_HID.cs" />
     <Compile Include="Models\Serial_Model.cs" />
     <Compile Include="Models\Servo_Model.cs" />
     <Compile Include="Models\SystemData_Model.cs" />
@@ -194,6 +190,7 @@
     <Compile Include="Utils\WindowManager.cs" />
     <Compile Include="ViewModels\Auto_ViewModel.cs" />
     <Compile Include="ViewModels\Child_ViewModel.cs" />
+    <Compile Include="ViewModels\DioManager_ViewModel.cs" />
     <Compile Include="ViewModels\Data_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\Dio_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\EquipmentMode_ViewModel.cs" />
@@ -237,6 +234,9 @@
     <Compile Include="Views\Popup_View\JogVelocity_View.xaml.cs">
       <DependentUpon>JogVelocity_View.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Popup_View\MessageBoxYesNo_View.xaml.cs">
+      <DependentUpon>MessageBoxYesNo_View.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Popup_View\MessageBox_View.xaml.cs">
       <DependentUpon>MessageBox_View.xaml</DependentUpon>
     </Compile>
@@ -258,8 +258,14 @@
     <Compile Include="Views\Popup_View\SystemData_View.xaml.cs">
       <DependentUpon>SystemData_View.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Popup_View\Number_View.xaml.cs">
+      <DependentUpon>Number_View.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Popup_View\TcpSerial_View.xaml.cs">
       <DependentUpon>TcpSerial_View.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\DioManager_View.xaml.cs">
+      <DependentUpon>DioManager_View.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Teach_View.xaml.cs">
       <DependentUpon>Teach_View.xaml</DependentUpon>
@@ -287,6 +293,10 @@
     <Page Include="Styles\SafetyView_Style.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Styles\DioView_Style.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Styles\TeachView_Style.xaml">
       <SubType>Designer</SubType>
@@ -324,6 +334,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Views\Popup_View\MessageBoxYesNo_View.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\Popup_View\MessageBox_View.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -352,9 +366,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Views\Popup_View\Number_View.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\Popup_View\TcpSerial_View.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\DioManager_View.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Teach_View.xaml">
       <SubType>Designer</SubType>

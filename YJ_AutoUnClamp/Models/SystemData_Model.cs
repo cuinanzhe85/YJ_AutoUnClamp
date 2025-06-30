@@ -24,6 +24,12 @@ namespace YJ_AutoUnClamp.Models
             get { return _TopCode; }
             set { SetValue(ref _TopCode, value); }
         }
+        public string _NfcDelay;
+        public string NfcDelay
+        {
+            get { return _NfcDelay; }
+            set { SetValue(ref _NfcDelay, value); }
+        }
         private string _AgingTime;
         public string AgingTime
         {

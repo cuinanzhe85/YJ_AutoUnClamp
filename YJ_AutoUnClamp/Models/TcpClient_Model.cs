@@ -32,19 +32,17 @@ namespace YJ_AutoUnClamp.Models
         }
 
         // 서버에 연결
-        public bool Connect(string host, int port)
+        public bool Connect()
         {
             try
             {
-                IpAddress = host;
-                Port = port;
                 _client = new TcpClient();
                 // 연결 시도 (await로 연결 완료까지 대기)
-                _client.Connect(host, port);
+                _client.Connect(IpAddress, Port);
 
                 // 연결 성공하면 스트림 가져오기
                 _stream = _client.GetStream();
-                Global.Mlog.Info("서버에 연결되었습니다.");
+                Global.Mlog.Info("TCP 서버에 연결되었습니다.");
 
                 _cts = new CancellationTokenSource();
 
@@ -151,7 +149,7 @@ namespace YJ_AutoUnClamp.Models
                     pingReply = ping.Send(IPAddress.Parse(IpAddress));
                     if (pingReply.Status == IPStatus.Success)
                     {
-                        Connect(IpAddress, Port);
+                        Connect();
                     }
                     else
                     {

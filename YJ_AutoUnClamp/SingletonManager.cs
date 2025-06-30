@@ -48,7 +48,6 @@ namespace YJ_AutoUnClamp
         }
         public ObservableCollection<int> UnLoadFloor { get; set; }
         public ObservableCollection<Lift_Model> Display_Lift { get; set; }
-        public int UnLoadStageNo = 0;
         public bool BottomClampDone = false;
         public bool BottomClampNG = false;
         // 7단 Loading완료 변수 
@@ -65,7 +64,7 @@ namespace YJ_AutoUnClamp
         public EquipmentMode EquipmentMode { get; set; } = EquipmentMode.Auto;
 
         #region // Properties
-        public EziDio_Model Ez_Dio { get; set; }
+        public EziDio_Model Dio { get; set; }
         public EzMotion_Model_E Ez_Model { get; set; }
         public Serial_Model[] SerialModel { get; set; }
         public RadObservableCollection<Unit_Model> Unit_Model { get; set; }
@@ -75,9 +74,7 @@ namespace YJ_AutoUnClamp
         public ObservableCollection<SpecData_Model> Spec_Data { get; set; }
         public ModelData_Model Current_Model { get; set; }
         public SystemData_Model SystemModel { get; set; }
-        public Http_Model HttpModel { get; set; }
         public Aging_Model AgingModel { get; set; }
-        public HttpJson_Model HttpJsonModel { get; set; }
         public HttpClient HttpClient { get; set; }
 
         public TcpClient_Model TcpClient { get; set; }
@@ -94,7 +91,7 @@ namespace YJ_AutoUnClamp
             Unit_Model = new RadObservableCollection<Unit_Model>();
             Servo_Model = new RadObservableCollection<Servo_Model>();
             Ez_Model = new EzMotion_Model_E();
-            Ez_Dio = new EziDio_Model();
+            Dio = new EziDio_Model();
             DisplayUI_Dio = new RadObservableCollection<bool>();
             Channel_Model = new RadObservableCollection<Channel_Model>();
             Teaching_Data = new Dictionary<string, double>();
@@ -102,9 +99,7 @@ namespace YJ_AutoUnClamp
             Current_Model = new ModelData_Model();
             Spec_Data = new ObservableCollection<SpecData_Model>();
             SystemModel = new SystemData_Model();
-            HttpModel = new Http_Model();
             AgingModel = new Aging_Model();
-            HttpJsonModel = new HttpJson_Model();
             HttpClient = new HttpClient();
             TcpClient = new TcpClient_Model();
 
@@ -125,7 +120,6 @@ namespace YJ_AutoUnClamp
             {
                 Channel_Model.Add(new Channel_Model((ChannelList)i));
             }
-            HttpClient.Timeout = TimeSpan.FromSeconds(2);
         }
         public void Run()
         {
@@ -150,7 +144,8 @@ namespace YJ_AutoUnClamp
             Global.instance.BusyStatus = false;
             Global.instance.BusyContent = string.Empty;
 
-            TcpClient.Connect("192.168.10.20", 8000);
+            // TCP Connect   
+            TcpClient.Connect();
         }
         private void LoadSystemFiles()
         {
@@ -160,27 +155,23 @@ namespace YJ_AutoUnClamp
             // Config 폴더 경로 설정
             string configPath = Global.instance.IniConfigPath;
 
-            // Model, Job, Teach 폴더 경로 설정
-            string modelFolder = Path.Combine(configPath, "Model");
-            string specFolder = Path.Combine(configPath, "Spec");
-            string jobFolder = Path.Combine(configPath, "Job");
+            // Teach 폴더 경로 설정
             string teachFolder = Path.Combine(configPath, "Teach");
+            string mesLogFolder = Global.instance.IniMesLogPath;
+            string AlarmLogFolder = Global.instance.AlarmLogPath;
 
             // Config 폴더가 없으면 생성
             if (!Directory.Exists(configPath))
                 Directory.CreateDirectory(configPath);
-            // Model 폴더가 없으면 생성
-            if (!Directory.Exists(modelFolder))
-                Directory.CreateDirectory(modelFolder);
-            // Spec 폴더가 없으면 생성
-            if (!Directory.Exists(specFolder))
-                Directory.CreateDirectory(specFolder);
-            // Job 폴더가 없으면 생성
-            if (!Directory.Exists(jobFolder))
-                Directory.CreateDirectory(jobFolder);
             // Teach 폴더가 없으면 생성
             if (!Directory.Exists(teachFolder))
                 Directory.CreateDirectory(teachFolder);
+            //MES LOG 폴거가 없으면 생성
+            if (!Directory.Exists(mesLogFolder))
+                Directory.CreateDirectory(mesLogFolder);
+            //Alarm LOG 폴거가 없으면 생성
+            if (!Directory.Exists(AlarmLogFolder))
+                Directory.CreateDirectory(AlarmLogFolder);
 
             var myIni = new IniFile(Global.instance.IniSystemPath);
             string section = "SYSTEM";
@@ -195,6 +186,7 @@ namespace YJ_AutoUnClamp
 
             valus = myIni.Read("NFC_USE", section);
             SystemModel.NfcUseNotUse = valus;
+            Channel_Model[0].MesResult = valus;
 
             valus = myIni.Read("AGINT_TIME", section);
             SystemModel.AgingTime = valus;
@@ -204,6 +196,9 @@ namespace YJ_AutoUnClamp
 
             valus = myIni.Read("AGINT_BARCODE_FILE_PATH", section);
             SystemModel.AgingBarcodFilePath = valus;
+
+            valus = myIni.Read("NFC_DELAY_TIME", section);
+            SystemModel.NfcDelay = valus;
         }
        
         public void LoadTeachFile()
@@ -255,10 +250,10 @@ namespace YJ_AutoUnClamp
                 if (double.TryParse(velocity, out double parsedVelocity))
                     servo.Velocity = parsedVelocity;
 
-                if (double.TryParse(accelerate, out double parsedAccelerate))
+                if (int.TryParse(accelerate, out int parsedAccelerate))
                     servo.Accelerate = parsedAccelerate;
 
-                if (double.TryParse(decelerate, out double parsedDecelerate))
+                if (int.TryParse(decelerate, out int parsedDecelerate))
                     servo.Decelerate = parsedDecelerate;
 
                 if (double.TryParse(measurementVel, out double parsedMeasurementVel))
@@ -321,16 +316,16 @@ namespace YJ_AutoUnClamp
                         massage += nfcPort + "MES Open Fail Port open fail.\r\n";
                     continue;
                 }
-                else
-                {
-                    key = $"BARCODE_PORT_{i + 1}";
-                    string bcrPort = myIni.Read(key, section);
-                    SerialModel[i].PortName = key;
-                    SerialModel[i].Port = bcrPort;
+                //else
+                //{
+                //    key = $"BARCODE_PORT_{i + 1}";
+                //    string bcrPort = myIni.Read(key, section);
+                //    SerialModel[i].PortName = key;
+                //    SerialModel[i].Port = bcrPort;
 
-                    if (SerialModel[i].Open() == false)
-                        massage += bcrPort + "BCR Open Fail Port open fail.\r\n";
-                }
+                //    if (SerialModel[i].Open() == false)
+                //        massage += bcrPort + "BCR Open Fail Port open fail.\r\n";
+                //}
             }
             if (string.IsNullOrEmpty(massage)== false)
                 Global.instance.ShowMessagebox(massage);
@@ -339,18 +334,33 @@ namespace YJ_AutoUnClamp
         private void DioBoard_Init()
         {
             //BusyContent
+            Global.instance.BusyStatus = true;
             Global.instance.BusyContent = "Dio Board Connecting...";
-            
+            string error = string.Empty;
             for (int i =0; i < (int)DI_MAP.DI_MAX / 16; i++)
             {
-                Ez_Dio.Connect(i);
+                if (Dio.Connect(i) == false)
+                {
+                    if (string.IsNullOrEmpty(error) == false)
+                        error += ", ";
+                    error += $"DIO Slave {i} Connect fail";
+                }
             }
-
-            for (int i = 0; i < Ez_Dio.DisplayDio_List.Count + (int)EziDio_Model.DisplayExist_List.Max; i++)
+            if (string.IsNullOrEmpty(error) == false)
+            {
+                Global.instance.ShowMessagebox(error);
+            }
+            else
+            {
+                Dio.DioThreadStart(); // Dio Thread Start
+            }
+            for (int i = 0; i < Dio.DisplayDio_List.Count + (int)EziDio_Model.DisplayExist_List.Max; i++)
                 DisplayUI_Dio.Add(false);
 
             // Tower Lamp Init
-            Global.instance.Set_TowerLaamp(Global.TowerLampType.Init);
+            Global.instance.Set_TowerLamp(Global.TowerLampType.Init);
+            Global.instance.BusyStatus = false;
+            Global.instance.BusyContent = string.Empty;
         }
         private void Motion_Init()
         {
@@ -448,21 +458,6 @@ namespace YJ_AutoUnClamp
                     if (UnitsProcThread.CancellationPending == true)
                         break;
 
-                    // 메시지 큐에 메시지가 있다면 (전역으로 데이터를 송신하기 위한 목적으로 사용)
-                    if (SequenceQueue.GetCount() > 0)
-                    {
-                        msgItem msg = SequenceQueue.GetItem(0); //  첫번째 메시지를 가져온다.
-
-                        // 메시지의 evt(이벤트)에 따라 역할을 수행
-                        switch (msg.evt)
-                        {
-                            case msgItem.Event.SendVisionMsg:
-                                {
-                                    // Vision 데이터 송신. 정상적으로 연결되어있다면
-                                    break;
-                                }
-                        }
-                    }
 
                     // Tact Time Display
                     for (int i = 0; i < (int)ChannelList.Max; i++)
@@ -474,11 +469,11 @@ namespace YJ_AutoUnClamp
                     // 데이터 송신 외에는 아래의 상태 루프를 반복적으로 수행
                     if (IsWorkingUnitsProcThread == true)
                     {
-                        if (!Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_OP_EMERGENCY_FEEDBACK]
-                            || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_OP_EMERGENCY_FEEDBACK])
+                        if (!Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_OP_EMERGENCY_FEEDBACK]
+                            || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_OP_EMERGENCY_FEEDBACK])
                         {
                             Global.instance.SafetyErrorMessage = "EMERGENCY Button Operation! ";
-                            //IsSafetyInterLock = true;
+                            IsSafetyInterLock = true;
                         }
                         if (IsSafetyInterLock == true)
                         {
@@ -511,13 +506,17 @@ namespace YJ_AutoUnClamp
                             if(IsInspectionStart == true)
                             {
                                 // Safety 먼저 체크
-                                if (!Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_LEFT_DOOR]
-                                || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_RIGHT_DOOR]
-                                || !Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_LEFT_DOOR])
+                                if (!Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_RIGHT_DOOR]
+                                || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_LEFT_DOOR]
+                                || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_RIGHT_DOOR]
+                                || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_LEFT_DOOR])
                                 {
                                     Global.instance.SafetyErrorMessage = "DOOR IS OPEN ! ";
-                                    
                                     IsSafetyInterLock = true;
+                                }
+                                else if (Ez_Model.ServoSlaveOriginStatus() == false)
+                                {
+                                    Global.instance.InspectionStop();
                                 }
                                 else
                                 {
@@ -531,13 +530,17 @@ namespace YJ_AutoUnClamp
                                         {
                                             Unit_Model[i].Loop();
                                             // Unclamp Mes Error
-                                            if (!string.IsNullOrEmpty(Unit_Model[i].UnclampSetFailMessage))
+                                            if (!string.IsNullOrEmpty(Unit_Model[i].UnclampFailMessage))
                                             {
-                                                Global.instance.Set_TowerLaamp(Global.TowerLampType.Error);
-                                                Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
-                                                Global.instance.ShowMessagebox(Unit_Model[i].UnclampSetFailMessage);
-                                                Ez_Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
-                                                Global.instance.InspectionStop();
+                                                string message = Unit_Model[i].UnclampFailMessage;
+                                                Unit_Model[i].UnclampFailMessage = string.Empty;
+                                                Application.Current.Dispatcher.BeginInvoke(
+                                                   (ThreadStart)(() =>
+                                                   {
+                                                       Global.instance.InspectionStop(); 
+                                                       Global.instance.WriteAlarmLog(message);
+                                                       Global.instance.ShowMessagebox(message,true,true);
+                                                   } ), DispatcherPriority.Send);
                                             }
                                         }
                                             
@@ -545,7 +548,7 @@ namespace YJ_AutoUnClamp
                                     }
                                    Global.instance.UnLoadingTactTimeEnd();
                                 }
-                                if (Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OP_BOX_STOP])
+                                if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OP_BOX_STOP])
                                 {
                                     Global.instance.InspectionStop();
                                 }
@@ -553,7 +556,7 @@ namespace YJ_AutoUnClamp
                             // 검사 시작 신호가 들어오지 않으면 스위치 체크
                             else
                             {
-                                if (Ez_Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OP_BOX_START])
+                                if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OP_BOX_START])
                                 {
                                     _ = Global.instance.InspectionStart();
                                 }
@@ -582,9 +585,9 @@ namespace YJ_AutoUnClamp
                 Ez_Model = null;
             }
             // Dio 정리
-            if (Ez_Dio != null)
+            if (Dio != null)
             {
-                Ez_Dio = null;
+                Dio = null;
             }
             // Channel_Model 정리
             if (Channel_Model != null)

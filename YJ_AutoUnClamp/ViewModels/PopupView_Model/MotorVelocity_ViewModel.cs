@@ -2,7 +2,6 @@
 using Common.Managers;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using YJ_AutoUnClamp.Models;
@@ -59,12 +58,36 @@ namespace YJ_AutoUnClamp.ViewModels
                 // INI 파일에 기록
                 string servoName = originalServo.ServoName.ToString();
                 iniFile.Write($"{servoName}_Velocity", originalServo.Velocity.ToString("F2"), section);
-                iniFile.Write($"{servoName}_Accelerate", originalServo.Accelerate.ToString("F2"), section);
-                iniFile.Write($"{servoName}_Decelerate", originalServo.Accelerate.ToString("F2"), section);
+                iniFile.Write($"{servoName}_Accelerate", originalServo.Accelerate.ToString("D"), section);
+                iniFile.Write($"{servoName}_Decelerate", originalServo.Accelerate.ToString("D"), section);
                 iniFile.Write($"{servoName}_Measurement_Vel", originalServo.Measurement_Vel.ToString("F2"), section);
                 iniFile.Write($"{servoName}_Barcode_Vel", originalServo.Barcode_Vel.ToString("F2"), section);
             }
+            string massage = string.Empty;
+            for (int i = 0; i < SingletonManager.instance.Servo_Model.Count; i++)
+            {
+                int acc = SingletonManager.instance.Servo_Model[i].Accelerate;
+                int ret = SingletonManager.instance.Ez_Model.SetServoAccel(i, acc);
+                if (ret != 0)
+                {
+                    massage += $"{SingletonManager.instance.Servo_Model[i].ServoName} Accel set fail. Error code: {ret}";
+                    Global.Mlog.Info(massage);
+                    massage += "\r\n";
+                }
+                ret = SingletonManager.instance.Ez_Model.SetServoDccel(i, acc);
+                if (ret != 0)
+                {
+                    massage += $"{SingletonManager.instance.Servo_Model[i].ServoName} Dccel set fail. Error code: {ret}";
+                    Global.Mlog.Info(massage);
+                    massage += "\r\n";
+                }
+            }
+            if (!string.IsNullOrEmpty(massage))
+            {
+                Global.instance.ShowMessagebox(massage, true);
 
+                return;
+            }
             Global.instance.ShowMessagebox("Motor velocity settings have been successfully saved.",false);
         }
         #region // override

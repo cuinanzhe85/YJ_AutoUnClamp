@@ -15,7 +15,6 @@ namespace YJ_AutoUnClamp.ViewModels
     {
         #region // ICommands
         public ICommand RightMenu_PopupCommand { get; private set; }
-        public ICommand PointView_PopupCommand { get; private set; }
         #endregion
         #region // PopupManager
         enum AutoMenu_PopupList
@@ -92,6 +91,13 @@ namespace YJ_AutoUnClamp.ViewModels
             }
             else
             {
+                if (SingletonManager.instance.IsInspectionStart == true)
+                {
+                    if (obj.ToString() != "Info")
+                    {
+                        return;
+                    }
+                }
                 if (Enum.TryParse(obj.ToString(), out AutoMenu_PopupList popup))
                 {
                     PopupManager.ShowPopupView(PopupFactories, popup);
@@ -102,45 +108,18 @@ namespace YJ_AutoUnClamp.ViewModels
                 }
             }
         }
-        private void OnPointView_Command(object obj)
-        {
-            if(obj.ToString() == "0")
-            {
-                SingletonManager.instance.Channel_Model[0].Status = ChannelStatus.RUNNING;
-                SingletonManager.instance.Channel_Model[0].Barcode = "12345678";
-                SingletonManager.instance.Channel_Model[0].StartTactTime();
-            }
-            else if (obj.ToString() == "1")
-            {
-                SingletonManager.instance.Channel_Model[1].Status = ChannelStatus.OK;
-                SingletonManager.instance.Channel_Model[1].Barcode = "12345678";
-                SingletonManager.instance.Channel_Model[1].TactTime = "10";
-            }
-            else if (obj.ToString() == "2")
-            {
-                SingletonManager.instance.Channel_Model[2].Status = ChannelStatus.NG;
-                SingletonManager.instance.Channel_Model[2].Barcode = "12345678";
-                SingletonManager.instance.Channel_Model[2].TactTime = "10";
-            }
-            else
-            {
-                SingletonManager.instance.Channel_Model[0].StopTactTime();
-            }
-        }
-
+        
         #region override
         protected override void InitializeCommands()
         {
             base.InitializeCommands();
 
             RightMenu_PopupCommand = new RelayCommand(OnRightMenu_Command);
-            PointView_PopupCommand = new RelayCommand(OnPointView_Command);
         }
         protected override void DisposeManaged()
         {
             // ICommands 해제
             RightMenu_PopupCommand = null;
-            PointView_PopupCommand = null;
 
             // PopupFactories 해제
             if (PopupFactories != null)
@@ -169,7 +148,7 @@ namespace YJ_AutoUnClamp.ViewModels
         public Lift_Model(string lift)
         {
             Floor = new ObservableCollection<bool>();
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < (int)Floor_Index.Max; i++)
                 Floor.Add(false);
 
             this.LiftName = lift;

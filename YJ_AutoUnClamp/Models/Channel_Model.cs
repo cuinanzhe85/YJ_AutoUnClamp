@@ -66,6 +66,18 @@ namespace YJ_AutoUnClamp.Models
             get { return _UnLoadCount; }
             set { SetValue(ref _UnLoadCount, value); }
         }
+        private string _CnNomber;
+        public string CnNomber
+        {
+            get { return _CnNomber; }
+            set { SetValue(ref _CnNomber, value); }
+        }
+        private string _MesResult;
+        public string MesResult
+        {
+            get { return _MesResult; }
+            set { SetValue(ref _MesResult, value); }
+        }
         // Stopwatch 및 DispatcherTimer 추가
         private Stopwatch _Stopwatch;
         public Channel_Model(ChannelList channel)

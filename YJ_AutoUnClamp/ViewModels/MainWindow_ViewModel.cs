@@ -4,7 +4,6 @@ using Common.Mvvm;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,13 +12,11 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using YJ_AutoUnClamp.Models;
 using YJ_AutoUnClamp.Utils;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace YJ_AutoUnClamp.ViewModels
 {
     public class MainWindow_ViewModel : BaseMainControlViewModel
     {
-        public NFC_HID NFC_HID { get; set; }
         #region // ICommand Property
         public ICommand BottomMenu_ButtonCommands { get; private set; }
         #endregion
@@ -44,7 +41,7 @@ namespace YJ_AutoUnClamp.ViewModels
         private readonly Dictionary<MainWindow_PopupList, Func<(Window, Child_ViewModel)>> PopupFactories;
         #endregion
 
-        private string _DepartmentName = "Mobile";
+        private string _DepartmentName = "SmartFactory Group(MX)";
         public string DepartmentName
         {
             get { return _DepartmentName; }
@@ -80,6 +77,7 @@ namespace YJ_AutoUnClamp.ViewModels
             Modules.Add(new ModuleDescription() { ModuleType = typeof(Data_ViewModel), ViewType = typeof(Data_View) });
             Modules.Add(new ModuleDescription() { ModuleType = typeof(Teach_ViewModel), ViewType = typeof(Teach_View) });
             Modules.Add(new ModuleDescription() { ModuleType = typeof(Log_ViewModel), ViewType = typeof(Log_View) });
+            Modules.Add(new ModuleDescription() { ModuleType = typeof(DioManager_ViewModel), ViewType = typeof(DioManager_View) });
             ModulesManager = new ModulesManager(new ViewsManager(Modules), Modules);
 
             // Loading Backgorund Thread
@@ -103,6 +101,8 @@ namespace YJ_AutoUnClamp.ViewModels
                 (ThreadStart)(() =>
                 {
                     //NFC_HID = new NFC_HID();
+                    SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_STOP, true);
+                    SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.OP_BOX_START, false);
                     MainContents_ViewModel = CreateAndCacheViewModel<Auto_ViewModel>("Auto");
                 }), DispatcherPriority.Send);
         }
@@ -153,12 +153,38 @@ namespace YJ_AutoUnClamp.ViewModels
                     ChangeMainContentsView<Auto_ViewModel>("Auto");
                     break;
                 case "Data":
-                    ChangeMainContentsView<Data_ViewModel>("Data");
+                    if (SingletonManager.instance.IsInspectionStart != true)
+                    {
+                        var window = new Number_View();
+                        if (window.ShowDialog() == true)
+                        {
+                            string enteredPassword = window.ResultPassword;
+                            if (enteredPassword.Equals("0000"))
+                            {
+                                ChangeMainContentsView<Data_ViewModel>("Data");
+                            }
+                            else
+                            {
+                                Global.instance.ShowMessagebox("Password entry failed");
+                            }
+                        }
+                    }
                     break;
                 case "Teach":
-                    // Tower Lamp Operator
-                    Global.instance.Set_TowerLaamp(Global.TowerLampType.Operator);
-                    ChangeMainContentsView<Teach_ViewModel>("Teach");
+                    if (SingletonManager.instance.IsInspectionStart != true)
+                    {
+                        // Tower Lamp Operator
+                        Global.instance.Set_TowerLamp(Global.TowerLampType.Operator);
+                        ChangeMainContentsView<Teach_ViewModel>("Teach");
+                    }
+                    break;
+                case "DIO":
+                    if (SingletonManager.instance.IsInspectionStart != true)
+                    {
+                        // Tower Lamp Operator
+                        Global.instance.Set_TowerLamp(Global.TowerLampType.Operator);
+                        ChangeMainContentsView<DioManager_ViewModel>("DIO");
+                    }
                     break;
                 case "Log":
                     ChangeMainContentsView<Log_ViewModel>("Log");
@@ -170,7 +196,18 @@ namespace YJ_AutoUnClamp.ViewModels
                     PopupManager.ShowPopupView(PopupFactories, MainWindow_PopupList.Gocator);
                     break;
                 case "Exit":
-                    SoftwareExit();
+                    Application.Current.Dispatcher.BeginInvoke(
+                                (ThreadStart)(() =>
+                                {
+                                    var msgBox = new MessageBoxYesNo_View("Confirm! Are You Ready Exit Program?");
+                                    bool? result = msgBox.ShowDialog();
+                                    if (result == true)
+                                    {
+                                        // Yes 클릭
+                                        SoftwareExit();
+                                    }
+
+                                }), DispatcherPriority.Send);
                     break;
             }
         }
@@ -221,7 +258,7 @@ namespace YJ_AutoUnClamp.ViewModels
                     SingletonManager.instance.Ez_Model.ServoStop(i);
                 }
                 // NMC Dio Thread Stop
-                SingletonManager.instance.Ez_Dio.DioThreadStop();
+                SingletonManager.instance.Dio.DioThreadStop();
                 
                 // Bcr Close
                 for (int i=0; i<(int)Serial_Model.SerialIndex.Max; i++)
@@ -230,8 +267,9 @@ namespace YJ_AutoUnClamp.ViewModels
                 }
                 for (int i = 0; i < (int)EziDio_Model.DI_MAP.DI_MAX / 16; i++)
                 {
-                    SingletonManager.instance.Ez_Dio.Close(i);
+                    SingletonManager.instance.Dio.Close(i);
                 }
+                SingletonManager.instance.TcpClient.Disconnect();
                 SingletonManager.instance.TcpClient.IsReconnectThreadClose = true;
             });
 

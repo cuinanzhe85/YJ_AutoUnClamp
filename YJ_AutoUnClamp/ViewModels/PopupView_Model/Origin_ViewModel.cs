@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using YJ_AutoUnClamp.Models;
 
 namespace YJ_AutoUnClamp.ViewModels
@@ -46,7 +47,7 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _BusyContent; }
             set { SetValue(ref _BusyContent, value); }
         }
-        private EziDio_Model Dio = SingletonManager.instance.Ez_Dio;
+        private EziDio_Model Dio = SingletonManager.instance.Dio;
         private EzMotion_Model_E Ez_Model = SingletonManager.instance.Ez_Model;
         public ObservableCollection<ServoSlaveViewModel> ServoSlaves { get; set; }
         public Origin_ViewModel()
@@ -80,8 +81,12 @@ namespace YJ_AutoUnClamp.ViewModels
                     foreach (var slave in ServoSlaves.Where(s => s.IsChecked))
                     {
                         result = SingletonManager.instance.Ez_Model.SetServoOn(slave.SlaveID, true);
-                        slave.Color = result ? "Bisque" : "White";
-                        slave.IsChecked = false;
+                        slave.Color = result ? "LawnGreen" : "White";
+                        //slave.IsChecked = false;
+                        if (result == true)
+                            Global.instance.ShowMessagebox($"Servo : {slave.Name} Power On Success", false);
+                        else
+                            Global.instance.ShowMessagebox("Servo : {slave.Name} Power On Fail");
                     }
                     break;
                 case "Off":
@@ -95,7 +100,7 @@ namespace YJ_AutoUnClamp.ViewModels
                                 failedSlaves += ", ";
                             failedSlaves += slave.Name;
                         }
-                        slave.IsChecked = false;
+                        //slave.IsChecked = false;
                     }
                     if (!string.IsNullOrEmpty(failedSlaves))
                     {
@@ -115,7 +120,7 @@ namespace YJ_AutoUnClamp.ViewModels
                                 failedSlave += ", ";
                             failedSlave += slave.Name;
                         }
-                        slave.IsChecked = false;
+                       // slave.IsChecked = false;
                     }
                     if (!string.IsNullOrEmpty(failedSlave))
                     {
@@ -125,6 +130,8 @@ namespace YJ_AutoUnClamp.ViewModels
                     }
                     break;
                 case "Origin":
+                    if (DoorOpenCheck() == true)
+                        break;
                     BusyStatus = true;
                     // 선택된 슬레이브 필터링
                     var selectedSlaves = ServoSlaves.Where(slave => slave.IsChecked).ToList();
@@ -143,8 +150,8 @@ namespace YJ_AutoUnClamp.ViewModels
                         }
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
                         result = await SingletonManager.instance.Ez_Model.ServoOrigin(Slave.SlaveID);
-                        Slave.Color = result ? "PaleGreen" : "White";
-                        Slave.IsChecked = false;
+                        Slave.Color = result ? "LawnGreen" : "White";
+                        //Slave.IsChecked = false;
                         if (!result)
                         {
                             failedSlavesList.Add(Slave.Name);
@@ -166,8 +173,8 @@ namespace YJ_AutoUnClamp.ViewModels
                         }
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
                         result = await SingletonManager.instance.Ez_Model.ServoOrigin(Slave.SlaveID);
-                        Slave.Color = result ? "PaleGreen" : "White";
-                        Slave.IsChecked = false;
+                        Slave.Color = result ? "LawnGreen" : "White";
+                        //Slave.IsChecked = false;
                         if (!result)
                         {
                             failedSlavesList.Add(Slave.Name);
@@ -193,8 +200,8 @@ namespace YJ_AutoUnClamp.ViewModels
                         }
                         BusyContent = $"Please Wait. Now Servo Origin...{Slave.Name}";
                         result = await SingletonManager.instance.Ez_Model.ServoOrigin(Slave.SlaveID);
-                        Slave.Color = result ? "PaleGreen" : "White";
-                        Slave.IsChecked = false;
+                        Slave.Color = result ? "LawnGreen" : "White";
+                        //Slave.IsChecked = false;
                         if (!result)
                         {
                             failedSlavesList.Add(Slave.Name);
@@ -215,8 +222,8 @@ namespace YJ_AutoUnClamp.ViewModels
                                 {
                                     BusyContent = $"Please Wait. Now Servo Origin...{slave.Name}";
                                     result = await SingletonManager.instance.Ez_Model.ServoOrigin(slave.SlaveID);
-                                    slave.Color = result ? "PaleGreen" : "White";
-                                    slave.IsChecked = false;
+                                    slave.Color = result ? "LawnGreen" : "White";
+                                    //slave.IsChecked = false;
                                     if (!result)
                                     {
                                         failedSlavesList.Add(slave.Name);
@@ -236,11 +243,41 @@ namespace YJ_AutoUnClamp.ViewModels
                         Global.Mlog.Error(failedMessage);
                         Global.instance.ShowMessagebox(failedMessage);
                     }
-
+                    else
+                    {
+                        Global.instance.ShowMessagebox("Origin Success", false);
+                    }
                     BusyContent = string.Empty;
                     BusyStatus = false;
                     break;
             }
+        }
+        private bool DoorOpenCheck()
+        {
+            // Safety 먼저 체크
+            if (!Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_LEFT_DOOR]
+                || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_RIGHT_DOOR]
+                || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.FRONT_LEFT_DOOR])
+            {
+                Application.Current.Dispatcher.BeginInvoke(
+                                (ThreadStart)(() =>
+                                {
+                                    // Todo : Interlock Loop Stop. 진행중인 작업 모두 정지
+                                    Global.instance.InspectionStop();
+                                    // Safety Popup
+                                    Window window = new Safety_View();
+                                    Safety_ViewModel safety_ViewModel = new Safety_ViewModel();
+                                    window.DataContext = safety_ViewModel;
+                                    window.ShowDialog();
+                                    // Close
+                                    safety_ViewModel.Dispose();
+                                    safety_ViewModel = null;
+                                    window.Close();
+                                    window = null;
+                                }), DispatcherPriority.Send);
+                return true;
+            }
+            return false;
         }
         #region // override
         protected override void InitializeCommands()

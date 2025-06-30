@@ -16,10 +16,10 @@ namespace YJ_AutoUnClamp.Models
             if (SingletonManager.instance.TcpClient.TcpReceiveData != "")
             if (!string.IsNullOrEmpty(SingletonManager.instance.TcpClient.TcpReceiveData))
             {
-                string nowTime = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
-                DateTime now = DateTime.ParseExact(nowTime, "yyyy-MM-dd-HH-mm-ss", null);
+                string nowTime = DateTime.Now.ToString("yyyyMMddHHmmss");
+                DateTime now = DateTime.ParseExact(nowTime, "yyyyMMddHHmmss", null);
 
-                DateTime Loading = DateTime.ParseExact(SingletonManager.instance.TcpClient.TcpReceiveData, "yyyy-MM-dd-HH-mm-ss", null);
+                DateTime Loading = DateTime.ParseExact(SingletonManager.instance.TcpClient.TcpReceiveData, "yyyyMMddHHmmss", null);
                 
                 TimeSpan diff = now - Loading;
 

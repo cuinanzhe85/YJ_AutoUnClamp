@@ -1,15 +1,12 @@
 ﻿using Common.Commands;
 using Common.Managers;
-using HelixToolkit.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using Telerik.Windows.Data;
 using YJ_AutoUnClamp.Models;
@@ -171,7 +168,7 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         #endregion
 
-        private EziDio_Model _Dio = SingletonManager.instance.Ez_Dio;
+        private EziDio_Model _Dio = SingletonManager.instance.Dio;
         public EziDio_Model Dio
         {
             get { return _Dio; }
@@ -553,7 +550,15 @@ namespace YJ_AutoUnClamp.ViewModels
                     {
                         return;
                     }
-                    EzModel.MoveABS((int)ServoSlave_List.Top_X_Handler_X, TeachPosition[(int)TeachingSection.Top_X]);
+                    if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.BOTTOM_RETURN_X_LEFT] != true)
+                    {
+                        Global.instance.ShowMessagebox("Bottom Return is not Left Position");
+                        break;
+                    }
+                    if (EzModel.MoveABS((int)ServoSlave_List.Top_X_Handler_X, TeachPosition[(int)TeachingSection.Top_X]) == false)
+                    {
+                        Global.instance.ShowMessagebox("UnClamp X Servo Move Fail");
+                    }
                     break;
                 case "In_Y":
                     if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
@@ -562,24 +567,38 @@ namespace YJ_AutoUnClamp.ViewModels
                     }
                     if (EzModel.IsMoveReadyPosZ() == false)
                     {
-                        MessageBox.Show("Z is not ready position.", "Servo Move", MessageBoxButton.OK);
+                        Global.instance.ShowMessagebox("Z is not ready position.");
                         return;
                     }
-                    EzModel.MoveABS((int)ServoSlave_List.In_Y_Handler_Y, TeachPosition[(int)TeachingSection.In_Y]);
+                    if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.UNLOAD_X_LEFT] == true)
+                    {
+                        Global.instance.ShowMessagebox("Pleass check unloading X position");
+                        return;
+                    }
+                    if (EzModel.MoveABS((int)ServoSlave_List.In_Y_Handler_Y, TeachPosition[(int)TeachingSection.In_Y]) == false)
+                    {
+                        Global.instance.ShowMessagebox("UnLoading Y Servo Move Fail");
+                    }
                     break;
                 case "In_Z":
                     if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
                     {
                         return;
                     }
-                    EzModel.MoveABS((int)ServoSlave_List.In_Z_Handler_Z, TeachPosition[(int)TeachingSection.In_Z]);
+                    if (EzModel.MoveABS((int)ServoSlave_List.In_Z_Handler_Z, TeachPosition[(int)TeachingSection.In_Z]) == false)
+                    {
+                        Global.instance.ShowMessagebox("UnLoading Z Servo Move Fail");
+                    }
                     break;
                 case "Lift":
                     if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
                     {
                         return;
                     }
-                    EzModel.MoveABS((int)ServoSlave_List.Lift_1_Z + Selected_LiftIndex, TeachPosition[(int)TeachingSection.Lift]);
+                    if (EzModel.MoveABS((int)ServoSlave_List.Lift_1_Z + Selected_LiftIndex, TeachPosition[(int)TeachingSection.Lift])== false)
+                    {
+                        Global.instance.ShowMessagebox("Lift Servo Move Fail");
+                    }
                     break;
             }
             if (UpdateTimer.IsEnabled == false)
@@ -678,14 +697,23 @@ namespace YJ_AutoUnClamp.ViewModels
                         Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_Z_GRIP, false);
                     break;
                 case "BTM_LR":
+                    if (EzModel.IsMoveUnclampPutDownDoneX() == false)
+                    {
+                        Global.instance.ShowMessagebox("X is not ready position.");
+                        return;
+                    }
                     if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.BOTTOM_RETURN_X_FWD] == true)
                         Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_X_FWD, false);
                     else
                         Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_X_FWD, true);
                     break;
+                case "Centering":
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.UNCLAMP_CV_CENTERING] == true)
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_CV_CENTERING, false);
+                    else
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.UNCLAMP_CV_CENTERING, true);
+                    break;
             }
-            //int index = int.Parse(obj.ToString());
-            //Dio.SetIO_OutputData(index, Dio.DO_OPER_DATA[index]);
         }
         #region // override
         protected override void InitializeCommands()

@@ -1,4 +1,5 @@
 ﻿using Common.Mvvm;
+using log4net;
 using System;
 using System.IO.Ports;
 using System.Security.Cryptography;
@@ -17,9 +18,9 @@ namespace YJ_AutoUnClamp.Models
 
         public enum SerialIndex
         {
-            bcr1,
-            bcr2,
-            bcr3,
+            //bcr1,
+            //bcr2,
+            //bcr3,
             Nfc,
             Mes,
             Max
@@ -167,10 +168,13 @@ namespace YJ_AutoUnClamp.Models
                     {
                         if (!string.IsNullOrEmpty(Data))
                         {
-                            string[] parts = Data.Split('=');
-                            NfcData = parts[1].Trim();
-                            IsReceived = true;
-
+                            if (Data.Contains("="))
+                            {
+                                string[] parts = Data.Split('=');
+                                NfcData = parts[1].Trim();
+                                IsReceived = true;
+                            }
+                            Data.Trim();
                             Global.Mlog.Info($"{PortName} : {Port} Receive '{Data}'");
                         }
                     }
@@ -180,11 +184,11 @@ namespace YJ_AutoUnClamp.Models
                 }
                 else if (PortName.Contains("MES"))
                 {
-                    MesResult = Data.Trim();
-                    if (!string.IsNullOrEmpty(MesResult))
+                    if (!string.IsNullOrEmpty(Data))
                     {
-                        Global.Mlog.Info($"{PortName} : {Port} Receive '{MesResult}'");
+                        Global.Mlog.Info($"{PortName} : {Port} Receive '{Data}'");
                         IsReceived = true;
+                        MesResult = Data.Trim();
                     }
                 }
                 else

@@ -331,7 +331,7 @@ namespace YJ_AutoUnClamp.Models
         public bool SetAmpEnable(int iSlaveNo, bool bEnable)
         {
             /** AMP */
-            if ((EziMOTIONPlusELib.FAS_ServoEnable(iSlaveNo, bEnable ? 1 : 0) != EziMOTIONPlusRLib.FMM_OK))
+            if ((EziMOTIONPlusELib.FAS_ServoEnable(iSlaveNo, bEnable ? 1 : 0) != EziMOTIONPlusELib.FMM_OK))
             {
                 return false;
             }
@@ -402,8 +402,11 @@ namespace YJ_AutoUnClamp.Models
             await Task.Delay(200);
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            int waitTime = 90000;
-            if (iSlaveNo == (int)ServoSlave_List.In_Y_Handler_Y)
+            int waitTime = 20000;
+            if (iSlaveNo == (int)ServoSlave_List.In_Y_Handler_Y
+                || iSlaveNo == (int)ServoSlave_List.Lift_1_Z
+                || iSlaveNo == (int)ServoSlave_List.Lift_2_Z
+                || iSlaveNo == (int)ServoSlave_List.Lift_3_Z)
                 waitTime = 90000;
             while (true)
             {
@@ -513,7 +516,7 @@ namespace YJ_AutoUnClamp.Models
 
             return EziMOTIONPlusRLib.FMM_OK;
         }
-        public bool MoveTopReadyPosX()
+        public bool MoveUnClampLeftPickupPosX()
         {
             double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_L).ToString()];
             // 소수점아래 2자리까지비교
@@ -521,7 +524,7 @@ namespace YJ_AutoUnClamp.Models
             Global.instance.Write_Sequence_Log("TOP_X_SERVO_POS", pos.ToString());
             return MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
         }
-        public bool IsMoveTopReadyDoneX()
+        public bool IsMoveUnClampLeftPickupDoneX()
         {
             double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_L).ToString()];
             // 소수점아래 2자리까지비교
@@ -531,7 +534,7 @@ namespace YJ_AutoUnClamp.Models
                 return true;
             return false;
         }
-        public bool MoveTopPickUpRightPosX()
+        public bool MoveUnclmapRightPickUpPosX()
         {
             double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_R).ToString()];
             // 소수점아래 2자리까지비교
@@ -539,7 +542,7 @@ namespace YJ_AutoUnClamp.Models
             Global.instance.Write_Sequence_Log("TOP_X_SERVO_POS", pos.ToString());
             return MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
         }
-        public bool IsMoveTopPickUpRightDoneX()
+        public bool IsMoveUnclampRightPickUpDoneX()
         {
             double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_PickUp_R).ToString()];
             // 소수점아래 2자리까지비교
@@ -549,7 +552,7 @@ namespace YJ_AutoUnClamp.Models
                 return true;
             return false;
         }
-        public bool MoveTopPutDownPosX()
+        public bool MoveUnclampPutDownPosX()
         {
             double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Put_Down).ToString()];
             // 소수점아래 2자리까지비교
@@ -557,7 +560,7 @@ namespace YJ_AutoUnClamp.Models
             Global.instance.Write_Sequence_Log("TOP_X_SERVO_POS", pos.ToString());
             return MoveABS((int)(ServoSlave_List.Top_X_Handler_X), pos);
         }
-        public bool IsMoveTopPutDownDoneX()
+        public bool IsMoveUnclampPutDownDoneX()
         {
             double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.Top_X_Put_Down).ToString()];
             // 소수점아래 2자리까지비교
@@ -627,7 +630,7 @@ namespace YJ_AutoUnClamp.Models
                 return true;
             return false;
         }
-        public bool MoveMoveLiftInputPos(int Index)
+        public bool MoveMoveLiftUpperPos(int Index)
         {
             double pos = 0;
             if (Index == 0)
@@ -641,7 +644,7 @@ namespace YJ_AutoUnClamp.Models
             Global.instance.Write_Sequence_Log("LIFT_SERVO_POS", pos.ToString());
             return MoveABS((int)(ServoSlave_List.Lift_1_Z + Index), pos);
         }
-        public bool IsMoveLiftInputDone(int Index)
+        public bool IsMoveLiftUpperDone(int Index)
         {
             double pos = 0;
             if (Index == 0)
@@ -659,17 +662,11 @@ namespace YJ_AutoUnClamp.Models
         }
         public bool IsUnloadSafetyPosY()
         {
-            double Pickuppos1 = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_1).ToString()];
+            double pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_3).ToString()];
             // 소수점아래 2자리까지비교
-            Pickuppos1 = Math.Round(Pickuppos1, 2);
-            double Pickuppos2 = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_2).ToString()];
-            // 소수점아래 2자리까지비교
-            Pickuppos2 = Math.Round(Pickuppos2, 2);
-            double Pickuppos3 = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Y_PickUp_3).ToString()];
-            // 소수점아래 2자리까지비교
-            Pickuppos3 = Math.Round(Pickuppos3, 2);
+            pos = Math.Round(pos, 2);
             double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Y_Handler_Y)), 2);
-            if (GetPos == Pickuppos1 || GetPos == Pickuppos2 || GetPos == Pickuppos3)
+            if (GetPos >= pos)
                 return true;
             return false;
         }
@@ -763,17 +760,17 @@ namespace YJ_AutoUnClamp.Models
                 return true;
             return false;
         }
-        public bool MovePickUpPosZ()
+        public bool MovePickUpPosZ(int LiftIndex)
         {
-            double pos = GetPickUpFloorPos();
+            double pos = GetPickUpFloorPos(LiftIndex);
             // 소수점아래 2자리까지비교
             pos = Math.Round(pos, 2);
             Global.instance.Write_Sequence_Log("Z_SERVO_POS", pos.ToString());
             return MoveABS((int)(ServoSlave_List.In_Z_Handler_Z), pos);
         }
-        public bool IsMovePickUpPosZ()
+        public bool IsMovePickUpPosZ(int LiftIndex)
         {
-            double pos = GetPickUpFloorPos();
+            double pos = GetPickUpFloorPos(LiftIndex);
             // 소수점아래 2자리까지비교
             pos = Math.Round(pos, 2);
             double GetPos = Math.Round(GetActualPos((int)(ServoSlave_List.In_Z_Handler_Z)), 2);
@@ -792,10 +789,53 @@ namespace YJ_AutoUnClamp.Models
             else
                 return true;
         }
-        private double GetPickUpFloorPos()
+        public bool ServoSlaveOriginStatus()
+        {
+            if (IsOriginOK((int)ServoSlave_List.In_Y_Handler_Y) == false
+                || IsOriginOK((int)ServoSlave_List.In_Z_Handler_Z) == false
+                || IsOriginOK((int)ServoSlave_List.Top_X_Handler_X) == false
+                || IsOriginOK((int)ServoSlave_List.Lift_1_Z) == false
+                || IsOriginOK((int)ServoSlave_List.Lift_2_Z) == false
+                || IsOriginOK((int)ServoSlave_List.Lift_3_Z) == false)
+            {
+                string message = IsOriginOK((int)ServoSlave_List.In_Y_Handler_Y) == false ? "Servo Y is not Origin.\r\n" : "";
+                message = IsOriginOK((int)ServoSlave_List.In_Z_Handler_Z) == false ? "Servo Z is not Origin.\r\n" : "";
+                message = IsOriginOK((int)ServoSlave_List.Top_X_Handler_X) == false ? "Servo X is not Origin.\r\n" : "";
+                message = IsOriginOK((int)ServoSlave_List.Lift_1_Z) == false ? "Lift 1 is not Origin.\r\n" : "";
+                message = IsOriginOK((int)ServoSlave_List.Lift_2_Z) == false ? "Lift 2 is not Origin.\r\n" : "";
+                message = IsOriginOK((int)ServoSlave_List.Lift_3_Z) == false ? "Lift 3 is not Origin." : "";
+
+                Global.instance.ShowMessagebox(message, true, true);
+                return false;
+            }
+            return true;
+        }
+        public int SetServoAccel(int slave, int Accel)
+        {
+            int nRtn = EziMOTIONPlusELib.FAS_SetParameter(slave, 3, Accel);
+            if (nRtn != EziMOTIONPlusELib.FMM_OK)
+            {
+                string strMsg = "FAS_SetParameter() Accel \nReturned: " + nRtn.ToString();
+                return nRtn;
+            }
+            else
+                return nRtn;
+        }
+        public int SetServoDccel(int slave, int Dccel)
+        {
+            int nRtn = EziMOTIONPlusELib.FAS_SetParameter(slave, 4, Dccel);
+            if (nRtn != EziMOTIONPlusELib.FMM_OK)
+            {
+                string strMsg = "FAS_SetParameter() Dccel \nReturned: " + nRtn.ToString();
+                return nRtn;
+            }
+            else
+                return nRtn;
+        }
+        private double GetPickUpFloorPos(int LiftIndex)
         {
             double pos=0;
-            int floor = SingletonManager.instance.UnLoadFloor[SingletonManager.instance.UnLoadStageNo] - 1;
+            int floor = SingletonManager.instance.UnLoadFloor[LiftIndex] - 1;
             pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Unload_1 + floor).ToString()];
             pos = Math.Round(pos, 2);
             return pos;

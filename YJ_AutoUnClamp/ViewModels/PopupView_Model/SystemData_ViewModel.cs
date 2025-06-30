@@ -1,9 +1,9 @@
 ﻿using Common.Commands;
 using Common.Managers;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.ObjectModel;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Windows;
 using System.Windows.Input;
 
 namespace YJ_AutoUnClamp.ViewModels
@@ -32,6 +32,12 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             get { return _TopCode; }
             set { SetValue(ref _TopCode, value); }
+        }
+        private string _NfcDelay;
+        public string NfcDelay
+        {
+            get { return _NfcDelay; }
+            set { SetValue(ref _NfcDelay, value); }
         }
         private string _NfcUseNotuse;
         public string NfcUseNotuse
@@ -67,40 +73,51 @@ namespace YJ_AutoUnClamp.ViewModels
             AgingTime = SingletonManager.instance.SystemModel.AgingTime;
             TopCode = SingletonManager.instance.SystemModel.TopCode;
             AgingBarcodFilePath = SingletonManager.instance.SystemModel.AgingBarcodFilePath;
+            NfcDelay = SingletonManager.instance.SystemModel.NfcDelay;
         }
         private void OnSave_Command(object obj)
         {
             try
             {
+                if (MessageBox.Show("Do you want to save the modification data?.", "System Manager", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+                {
+                    return;
+                }
                 Global.Mlog.Info($"[USER] System Data 'Save' Button Click");
                 var myIni = new IniFile(Global.instance.IniSystemPath);
               
                 string Section = "SYSTEM";
                 
-                myIni.Write("BARCODE_USE", BcrUseNotuse, Section);
-                Global.Mlog.Info(" BARCODE_USE = " + BcrUseNotuse);
+                //myIni.Write("BARCODE_USE", BcrUseNotuse, Section);
+                //Global.Mlog.Info(" BARCODE_USE = " + BcrUseNotuse);
 
-                SingletonManager.instance.SystemModel.BcrUseNotUse = BcrUseNotuse;
+                //SingletonManager.instance.SystemModel.BcrUseNotUse = BcrUseNotuse;
 
                 myIni.Write("NFC_USE", NfcUseNotuse, Section);
                 Global.Mlog.Info(" NFC_USE = " + NfcUseNotuse);
 
                 SingletonManager.instance.SystemModel.NfcUseNotUse = NfcUseNotuse;
+                SingletonManager.instance.Channel_Model[0].MesResult = NfcUseNotuse;
 
                 myIni.Write("AGINT_TIME", AgingTime, Section);
                 Global.Mlog.Info(" AGINT_TIME = " + AgingTime);
 
                 SingletonManager.instance.SystemModel.AgingTime = AgingTime;
 
-                myIni.Write("AGINT_BARCODE_FILE_PATH", AgingBarcodFilePath, Section);
-                Global.Mlog.Info(" AGINT_BARCODE_FILE_PATH = " + AgingTime);
+                myIni.Write("NFC_DELAY_TIME", NfcDelay, Section);
+                Global.Mlog.Info(" NFC_DELAY_TIME = " + NfcDelay);
 
-                SingletonManager.instance.SystemModel.AgingBarcodFilePath = AgingBarcodFilePath;
+                SingletonManager.instance.SystemModel.NfcDelay = NfcDelay;
 
-                myIni.Write("TOP_CODE", TopCode, Section);
-                Global.Mlog.Info(" TOP_CODE = " + TopCode);
+                //myIni.Write("AGINT_BARCODE_FILE_PATH", AgingBarcodFilePath, Section);
+                //Global.Mlog.Info(" AGINT_BARCODE_FILE_PATH = " + AgingTime);
 
-                SingletonManager.instance.SystemModel.TopCode = TopCode;
+                //SingletonManager.instance.SystemModel.AgingBarcodFilePath = AgingBarcodFilePath;
+
+                //myIni.Write("TOP_CODE", TopCode, Section);
+                //Global.Mlog.Info(" TOP_CODE = " + TopCode);
+
+                //SingletonManager.instance.SystemModel.TopCode = TopCode;
             }
             catch (Exception e)
             {
@@ -110,37 +127,6 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         private void OnBottom_Command(object obj)
         {
-            if (obj.ToString() == "HTTP_TEST")
-            {
-                if (!string.IsNullOrEmpty(HttpSendData))
-                {
-                    //string retValues = SingletonManager.instance.HttpModel.GetprocCodeData(HttpSendData);
-
-                    SingletonManager.instance.HttpJsonModel.SendRequest("saveInspInfo", HttpSendData, "PASS");
-                    while (true)
-                    {
-                        if (SingletonManager.instance.HttpJsonModel.DataSendFlag == true)
-                        {
-                            Global.Mlog.Info($"HTTP Response ResultCode: {SingletonManager.instance.HttpJsonModel.ResultCode}");
-                            Global.instance.ShowMessagebox($"HTTP Response ResultCode: {SingletonManager.instance.HttpJsonModel.ResultCode}");
-                            break;
-                        }
-                    }
-                }
-            }
-            else if (obj.ToString() == "FOLDER_OPEN")
-            {
-                using (FolderBrowserDialog dialog = new FolderBrowserDialog())
-                {
-                    dialog.Description = "폴더를 선택하세요.";
-                    dialog.RootFolder = Environment.SpecialFolder.Desktop;
-
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        AgingBarcodFilePath = dialog.SelectedPath;
-                    }
-                }
-            }
         }
 
         #region override

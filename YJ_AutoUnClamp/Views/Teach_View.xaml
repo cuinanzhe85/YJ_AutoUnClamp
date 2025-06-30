@@ -37,9 +37,8 @@
     </mvvm:BaseUserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.4*"/>
-            <RowDefinition Height="0.4*"/>
-            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="0.45*"/>
+            <RowDefinition Height="0.55*"/>
         </Grid.RowDefinitions>
         <!--Servo Move Common Area-->
         <GroupBox Header="Servo Control" BorderThickness="2" FontWeight="SemiBold">
@@ -250,9 +249,9 @@
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            
+
             <!--Teaching In Handler [ X Axis ]-->
-            <GroupBox Grid.Column="0" Header="Teaching Top Clamp Handler [ X Axis ]" BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
+            <GroupBox Grid.Column="0" Header="UnClamp Handler [ X Axis ]" BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -274,7 +273,7 @@
                             <telerik:RadButton Grid.Column="1" Content="Save" Style="{StaticResource Save_ButtonStyle}" Background="DarkCyan"
                                                 Command="{Binding TeachingSave_Command}" CommandParameter="Top_X"/>
                         </Grid>
-                        
+
                     </Grid>
                     <Grid Grid.Column="1">
                         <Grid.ColumnDefinitions>
@@ -291,11 +290,11 @@
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=15, Mode=TwoWay}"/>
                         <telerik:RadRadioButton Grid.Column="1" Grid.Row="1" Content="R Pick Up" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_Handler"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=16, Mode=TwoWay}"/>
-                        </Grid>
+                    </Grid>
                 </Grid>
             </GroupBox>
             <!--Teaching In Handler [ Y Axis ]-->
-            <GroupBox Grid.Column="1" Header="Teaching In Handler [ Y Axis ]"  BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
+            <GroupBox Grid.Column="1" Header="UnLoading [ Y Axis ]"  BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -317,7 +316,7 @@
                             <telerik:RadButton Grid.Column="1" Content="Save" Style="{StaticResource Save_ButtonStyle}" Background="DarkCyan"
                                         Command="{Binding TeachingSave_Command}" CommandParameter="In_Y"/>
                         </Grid>
-                        
+
                     </Grid>
                     <Grid Grid.Column="1">
                         <Grid.ColumnDefinitions>
@@ -349,7 +348,7 @@
                 </Grid>
             </GroupBox>
             <!--Teaching In Handler [ Z Axis ]-->
-            <GroupBox Grid.Column="1" Grid.Row="1" Header="Teaching In Handler [ Z Axis ]"  BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
+            <GroupBox Grid.Column="1" Grid.Row="1" Header="UnLoading [ Z Axis ]"  BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -385,11 +384,9 @@
                                     IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=5, Mode=TwoWay}"/>
                         <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
                                     IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=6, Mode=TwoWay}"/>
-                        
+
                         <Grid Grid.Row="1" Grid.ColumnSpan="2">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -406,16 +403,16 @@
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=10, Mode=TwoWay}" Margin="2,5,2,5"/>
                             <telerik:RadRadioButton Grid.Column="4" Content="5F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=11, Mode=TwoWay}" Margin="2,5,2,5"/>
-                            <telerik:RadRadioButton Grid.Column="5" Content="6F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <!--<telerik:RadRadioButton Grid.Column="5" Content="6F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=12, Mode=TwoWay}" Margin="2,5,2,5"/>
                             <telerik:RadRadioButton Grid.Column="6" Content="7F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
-                                        IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=13, Mode=TwoWay}" Margin="2,5,5,5"/>
+                                        IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=13, Mode=TwoWay}" Margin="2,5,5,5"/>-->
                         </Grid>
                     </Grid>
                 </Grid>
             </GroupBox>
             <!--Teaching Lift [ Z Axis ]-->
-            <GroupBox Grid.Column="0" Grid.Row="1" Header="Teaching Lift [ Z Axis ]"  BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
+            <GroupBox Grid.Column="0" Grid.Row="1" Header="Lift [ Z Axis ]"  BorderThickness="2" FontWeight="SemiBold" Foreground="OrangeRed">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -452,59 +449,16 @@
                         </Border>
                         <telerik:RadRadioButton Grid.Column="0" Grid.Row="1" Content="Upper" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Lift"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=18, Mode=TwoWay}"/>
-                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="1" Content="Bottom" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Lift"
+                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="1" Content="Low" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Lift"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=19, Mode=TwoWay}"/>
                         <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Unloading" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Lift"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=17, Mode=TwoWay}"/>
-                        
-                       
-                        </Grid>
+
+
+                    </Grid>
                 </Grid>
             </GroupBox>
-            
-        </Grid>
-        <!--Dio Control-->
-        <Grid Grid.Row="2" Margin="0,0,0,5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.25*"/>
-            </Grid.ColumnDefinitions>
-            
-            <GroupBox Grid.Column="0" Header="Dio Bottom Handler" BorderThickness="2" FontWeight="SemiBold" Foreground="Teal">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
 
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    
-                    <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Unload Y Grip" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="UnloadGripY" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Unload X Grip" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="UnloadGripX" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="2" Grid.Row="0" Content="Unload X Up/Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="UnloadUpDownX" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="3" Grid.Row="0" Content="Unclamp L Up/Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="L_UpDown" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="4" Grid.Row="0" Content="Unclamp L Grip 1" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="L_Grip1" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="5" Grid.Row="0" Content="Unclamp L Grip 2" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="L_Grip2" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="6" Grid.Row="0" Content="Unclamp R Up/Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="R_UpDown" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="0" Grid.Row="1" Content="Unclamp Center" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Center" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="1" Grid.Row="1" Content="Rtn Top Up/Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="TopUpDown" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="2" Grid.Row="1" Content="Rtn Top Grip" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="TopGrip" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="3" Grid.Row="1" Content="Rtn Top L/R" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="TopLR" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="4" Grid.Row="1" Content="Rtn BTM Up/Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="BTM_UpDown" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="5" Grid.Row="1" Content="Rtn BTM Grip" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="BTM_Grip" Command="{Binding DioControl_Command}" FontSize="12"/>
-                    <telerik:RadRadioButton Grid.Column="6" Grid.Row="1" Content="Rtn BTM L/R" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="BTM_LR" Command="{Binding DioControl_Command}" FontSize="12"/>
-
-                </Grid>
-            </GroupBox>
-            
-            
         </Grid>
     </Grid>
 </mvvm:BaseUserControl>

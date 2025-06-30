@@ -33,7 +33,7 @@
                 </LinearGradientBrush>
             </Grid.Background>
             <StackPanel Orientation="Horizontal">
-                <telerik:RadGlyph Glyph="&#xe13b;" Margin="15,0" FontSize="18" Foreground="White"/>
+                <telerik:RadGlyph Glyph="&#xe124;" Margin="15,0" FontSize="18" Foreground="White"/>
                 <Label Content="Product Info" Foreground="White" FontSize="13" FontWeight="SemiBold" Padding="0,6" VerticalContentAlignment="Center"/>
             </StackPanel>
             <telerik:RadButton Style="{StaticResource Exit_ButtonStyle}"

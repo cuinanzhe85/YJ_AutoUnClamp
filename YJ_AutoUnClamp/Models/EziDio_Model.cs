@@ -323,11 +323,16 @@ namespace YJ_AutoUnClamp.Models
                 {
                     return true;
                 }
-                if (iSlaveNo == 0) IpAddress = IPAddress.Parse("192.168.0.8");
-                if (iSlaveNo == 1) IpAddress = IPAddress.Parse("192.168.0.9");
-                if (iSlaveNo == 2) IpAddress = IPAddress.Parse("192.168.0.10");
-                if (iSlaveNo == 3) IpAddress = IPAddress.Parse("192.168.0.11");
-                if (iSlaveNo == 4) IpAddress = IPAddress.Parse("192.168.0.12");
+                if (iSlaveNo == 0) 
+                    IpAddress = IPAddress.Parse("192.168.0.8");
+                else if (iSlaveNo == 1) 
+                    IpAddress = IPAddress.Parse("192.168.0.9");
+                else if (iSlaveNo == 2) 
+                    IpAddress = IPAddress.Parse("192.168.0.10");
+                else if (iSlaveNo == 3) 
+                    IpAddress = IPAddress.Parse("192.168.0.11");
+                else if (iSlaveNo == 4) 
+                    IpAddress = IPAddress.Parse("192.168.0.12");
 
                 // Is not 0 == Connect Success
                 if (EziMOTIONPlusELib.FAS_ConnectTCP(IpAddress, slave) == true)
@@ -336,9 +341,9 @@ namespace YJ_AutoUnClamp.Models
                     Global.Mlog.Info($"EziMotion DIO Board Connect Success. IP Address : {IpAddress.ToString()}, Slave : {slave}");
 
                     // Thread Start
-                    DioThread = new Thread(ThreadReceive);
-                    DioThread.Start();
-                    IsDioThreadRunning = true;
+                    //DioThread = new Thread(ThreadReceive);
+                    //DioThread.Start();
+                    //IsDioThreadRunning = true;
                     return true;
                 }
                 // Is 0 == Connect Fail
@@ -394,7 +399,6 @@ namespace YJ_AutoUnClamp.Models
             if (nRtn == EziMOTIONPlusELib.FMM_OK)
             {
                 UpdateRawData(slave,DI_RAW_DATA, dwInput,false);
-                UpdateUiDio();
             }
         }
         public uint GetIO_OutputData(int slave)
@@ -459,28 +463,56 @@ namespace YJ_AutoUnClamp.Models
             SetIO_OutputData((int)DO_MAP.TOP_RETURN_Z_DOWN, false);  // Top Return up
             SetIO_OutputData((int)DO_MAP.UNLOAD_Z_DOWN, false); Thread.Sleep(1000); // Unloading X Z Up
             SetIO_OutputData((int)DO_MAP.UNLOAD_X_FWD, false);// Unloading X Right
-            SetIO_OutputData((int)DO_MAP.TOP_RETURN_X_FWD, false);  // Top  Left 
-            SetIO_OutputData((int)DO_MAP.BOTTOM_RETURN_X_FWD, false);  // Top  Left 
+            SetIO_OutputData((int)DO_MAP.TOP_RETURN_X_FWD, true);  // Top  Right 
+            SetIO_OutputData((int)DO_MAP.BOTTOM_RETURN_X_FWD, false);  // bottom  Left 
+        }
+        public void DioThreadStart()
+        {
+            if (DioThread == null || !DioThread.IsAlive)
+            {
+                DioThread = new Thread(ThreadReceive);
+                DioThread.Start();
+                IsDioThreadRunning = true;
+            }
         }
         public void ThreadReceive()
         {
             UpdateIO_OperData();
+            //int _OutputIndex = 0;
             while (!_shouldStop)
             {
                 try
                 {
-                    for (int i = 0; i < (int)DI_MAP.DI_MAX / 16; i++)
-                    {
-                        // Get Input Data
-                        GetIO_InputData(i);
-                        Thread.Sleep(1);
-                    }
-                    for (int j = 0; j < (int)DO_MAP.DO_MAX / 16; j++)
-                    {
-                        // Get Output Data
-                        GetIO_OutputData(j);
-                        Thread.Sleep(1);
-                    }
+                    GetIO_InputData(0);
+                    GetIO_InputData(1);
+                    GetIO_InputData(2);
+                    GetIO_InputData(3);
+                    GetIO_InputData(4);
+                    Thread.Sleep(2);
+                    GetIO_OutputData(0);
+                    GetIO_OutputData(1);
+                    GetIO_OutputData(2);
+                    GetIO_OutputData(3);
+                    Thread.Sleep(2);
+                    //for (int i = 0; i < ((int)DI_MAP.DI_MAX / 16); i++)
+                    //{
+                    //    // Get Input Data
+                    //    GetIO_InputData(i);
+                    //    Thread.Sleep(2);
+                    //    if (_OutputIndex >= ((int)DO_MAP.DO_MAX / 16))
+                    //        _OutputIndex = 0;
+                    //    // Get Output Data
+                    //    GetIO_OutputData(_OutputIndex);
+                    //    Thread.Sleep(2);
+                    //    _OutputIndex++;
+                    //}
+                    //for (int j = 0; j < (int)DO_MAP.DO_MAX / 16; j++)
+                    //{
+                    //    // Get Output Data
+                    //    GetIO_OutputData(j);
+                    //    Thread.Sleep(2);
+                    //}
+                    UpdateUiDio();
                 }
                 catch (Exception e)
                 {
@@ -489,7 +521,7 @@ namespace YJ_AutoUnClamp.Models
                     Global.ExceptionLog.ErrorFormat($"{System.Reflection.MethodBase.GetCurrentMethod().Name} - {error}");
                 }
 
-                Thread.Sleep(5);
+                //Thread.Sleep(5);
             }
             // 스레드 종료 후 상태 업데이트
             IsDioThreadRunning = false;
@@ -550,6 +582,12 @@ namespace YJ_AutoUnClamp.Models
             // LINQ를 사용하여 필요한 값만 추출
             for (int i = 0; i < DisplayDio_List.Count; i++)
             {
+                // 인덱스 체크
+                if (i >= SingletonManager.instance.DisplayUI_Dio.Count)
+                    break;
+                int diIndex = DisplayDio_List[i];
+                if (diIndex < 0 || diIndex >= DI_RAW_DATA.Count)
+                    continue;
                 if (SingletonManager.instance.DisplayUI_Dio[i] != DI_RAW_DATA[DisplayDio_List[i]])
                     SingletonManager.instance.DisplayUI_Dio[i] = DI_RAW_DATA[DisplayDio_List[i]];
             }
@@ -558,6 +596,8 @@ namespace YJ_AutoUnClamp.Models
             foreach (var mapping in DisplayExistMapping)
             {
                 int targetIndex = DisplayDio_List.Count + (int)mapping.Key;
+                if (targetIndex < 0 || targetIndex >= SingletonManager.instance.DisplayUI_Dio.Count)
+                    continue;
                 bool newValue = mapping.Value();
                 if (SingletonManager.instance.DisplayUI_Dio[targetIndex] != newValue)
                 {
