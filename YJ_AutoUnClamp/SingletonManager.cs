@@ -561,6 +561,8 @@ namespace YJ_AutoUnClamp
                                     _ = Global.instance.InspectionStart();
                                 }
                                 Unit_Model[(int)MotionUnit_List.In_CV].UnlodingCvLogic();
+                                Unit_Model[(int)MotionUnit_List.Out_CV].UnClampNgCvLogic();
+                                Unit_Model[(int)MotionUnit_List.Out_CV].TopOutCVLogic();
                                 Thread.Sleep(5);
                             }
                         }

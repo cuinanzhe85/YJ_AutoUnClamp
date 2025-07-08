@@ -836,6 +836,7 @@ namespace YJ_AutoUnClamp.Models
         {
             double pos=0;
             int floor = SingletonManager.instance.UnLoadFloor[LiftIndex] - 1;
+            Global.Mlog.Info($"GetPickUpFloorPos : {LiftIndex} Floor : {floor +1}");
             pos = SingletonManager.instance.Teaching_Data[(Teaching_List.In_Z_Unload_1 + floor).ToString()];
             pos = Math.Round(pos, 2);
             return pos;

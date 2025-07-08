@@ -112,6 +112,12 @@ namespace YJ_AutoUnClamp
             get { return _TactTimeStart; }
             set { SetValue(ref _TactTimeStart, value); }
         }
+        private double[] _AverageTactTime = new double[10];
+        public double[] AverageTactTime
+        {
+            get { return _AverageTactTime; }
+            set { SetValue(ref _AverageTactTime, value); }
+        }
         private Global()
         {
             // Date Timer
@@ -237,9 +243,16 @@ namespace YJ_AutoUnClamp
 
             myIni.Write(DateTime.Now.ToString("HH:mm:ss:fff"), cn + " - " +Result, section);
         }
+        public void UnLoadingTactTimeReset()
+        {
+            TactTimeStart = false;
+            TactTimeSw.Reset();
+            SingletonManager.instance.Channel_Model[0].TactTime = "0.0"; // 초기화 시 TactTime을 0.0으로 설정
+        }
         public void UnLoadingTactTimeStart()
         {
             TactTimeSw.Restart();
+            TactTimeStart = true;
         }
         public void UnLoadingTactTimeEnd()
         {
@@ -254,11 +267,28 @@ namespace YJ_AutoUnClamp
 ;                SingletonManager.instance.Channel_Model[0].TactTime = tt.ToString();
             }
         }
+        public void AverageTacttimeUpdate()
+        {
+            // 배열에서 가장 오래된 값을 제거하고 새 값을 추가
+            for (int i = AverageTactTime.Length - 1; i > 0; i--)
+            {
+                AverageTactTime[i] = AverageTactTime[i - 1];
+            }
+            AverageTactTime[0] = Convert.ToDouble(SingletonManager.instance.Channel_Model[0].TactTime);
+            // 평균 계산
+            double sum = 0;
+            for (int i = 0; i < AverageTactTime.Length; i++)
+            {
+                sum += AverageTactTime[i];
+            }
+            double average = sum / AverageTactTime.Length;
+            SingletonManager.instance.Channel_Model[0].AverageTactTime = average.ToString("F1");
+        }
         public void WriteAlarmLog(string message, string section = "ALARM")
         {
             try
             {
-                message.Replace("\r\n", " ");
+                message = message.Replace("\r\n", " ");
                 string logFile = Path.Combine(AlarmLogPath, $"{DateTime.Now:yyyyMMdd}.txt");
 
                 string time = DateTime.Now.ToString("yyyyMMdd HH:mm:ss:fff");
@@ -317,13 +347,14 @@ namespace YJ_AutoUnClamp
                     break;
             }
         }
-        public void ShowMessagebox(string message, bool isError = true, bool buzzOn = false)
+        public void ShowMessagebox(string message, bool isError = true, bool buzzOn = false, bool Alarm = false)
         {
             try
             {
                 // UI 쓰레드에서 동작하도록 보장
                 Application.Current.Dispatcher.Invoke(() =>
                 {
+                    SendMainUiLog(message, UiLogType.Error);
                     if (buzzOn == true)
                     {
                         Global.instance.Set_TowerLamp(Global.TowerLampType.Error);
@@ -332,6 +363,15 @@ namespace YJ_AutoUnClamp
                         view.ShowDialog();
                         Global.instance.Set_TowerLamp(Global.TowerLampType.Stop);
                         SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+                    }
+                    else if (Alarm == true)
+                    {
+                        Mlog.Info($"Error Message : {message}");
+                        SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+                        Thread.Sleep(1200);
+                        SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+                        var view = new MessageBox_View(message, isError);
+                        view.ShowDialog();
                     }
                     else
                     {

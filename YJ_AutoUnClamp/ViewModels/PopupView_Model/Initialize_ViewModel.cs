@@ -360,6 +360,7 @@ namespace YJ_AutoUnClamp.ViewModels
             SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].UnClampStep = Unit_Model.UnClampHandStep.Idle;
             SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].RtnBtmStep = Unit_Model.ReturnBottomStep.Idle;
             SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].RtnTopStep = Unit_Model.ReturnTopStep.Idle;
+            SingletonManager.instance.Unit_Model[(int)MotionUnit_List.In_CV].UnClampCvStep = Unit_Model.UnClamp_CV_Step.Idle;
             SingletonManager.instance.Unit_Model[(int)MotionUnit_List.Top_X].UnclampBottomReturnDone = false;
             // Return Conveyor Interface Off
             Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BOTTOM_RETURN_CV_INTERFACE, false);

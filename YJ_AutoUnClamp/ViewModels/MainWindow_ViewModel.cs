@@ -53,7 +53,7 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _SoftwareName; }
             set { SetValue(ref _SoftwareName, value); }
         }
-        private string _SoftwareVersion = "[ Ver 1.0.0 ]";
+        private string _SoftwareVersion = "[ 25-07-17 T2 ]";
         public string SoftwareVersion
         {
             get { return _SoftwareVersion; }

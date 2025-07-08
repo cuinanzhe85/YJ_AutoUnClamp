@@ -185,6 +185,25 @@ namespace YJ_AutoUnClamp.ViewModels
                     TcpReceiveData = "Empty";
                     await Tcp_DataSend();
                     break;
+                case "CONNECT":
+                    Tcp_Connect();
+                    break;
+            }
+        }
+        private void Tcp_Connect()
+        {
+            if (SingletonManager.instance.IsTcpConnected == true)
+                SingletonManager.instance.TcpClient.Disconnect();
+
+            if (SingletonManager.instance.TcpClient.Connect() == true)
+            {
+                Global.Mlog.Info("TCP Connect Success.");
+                MessageBox.Show("TCP Connect Success.", "TCP", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                Global.Mlog.Info("TCP Connect Fail.");
+                MessageBox.Show("TCP Connect Fail.", "TCP", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         private async Task Tcp_DataSend()
@@ -274,16 +293,16 @@ namespace YJ_AutoUnClamp.ViewModels
                 return;
             NfcData = "";
             SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].IsReceived = false;
-            SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NfcData = string.Empty; 
+            SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NewNfcData = string.Empty; 
             await Task.Run(async () =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
                 sw.Restart();
                 while (true)
                 {
-                    if (SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].IsReceived == true)
+                    if (!string.IsNullOrEmpty(SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NewNfcData))
                     {
-                        NfcData = SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NfcData;
+                        NfcData = SingletonManager.instance.SerialModel[(int)SerialIndex.Nfc].NewNfcData;
                         Global.Mlog.Info($"NFC Read : {NfcData}");
                         break;
                     }
@@ -292,7 +311,7 @@ namespace YJ_AutoUnClamp.ViewModels
                         MessageBox.Show("NFC read fail.", "NFC");
                         break;
                     }
-                    await Task.Delay(100); // Wait for 100ms before checking again
+                    await Task.Delay(10); // Wait for 100ms before checking again
                 }
             });
         }

@@ -62,6 +62,13 @@ namespace YJ_AutoUnClamp.Models
             get { return _NfcData; }
             set { SetValue(ref _NfcData, value); }
         }
+        private string _OldNfcData = string.Empty;
+        private string _NewNfcData = string.Empty;
+        public string NewNfcData
+        {
+            get { return _NewNfcData; }
+            set { SetValue(ref _NewNfcData, value); }
+        }
         public bool IsReceived { get; set; } = false;
         public SerialPort SerialPort { get; set; } = null;
         public Serial_Model()
@@ -171,8 +178,15 @@ namespace YJ_AutoUnClamp.Models
                             if (Data.Contains("="))
                             {
                                 string[] parts = Data.Split('=');
-                                NfcData = parts[1].Trim();
-                                IsReceived = true;
+                                //NfcData = parts[1].Trim();
+                                //IsReceived = true;
+                                NewNfcData = parts[1].Trim();
+                                if (NewNfcData != _OldNfcData)
+                                {
+                                    _OldNfcData = NewNfcData;
+                                    NfcData = NewNfcData;
+                                    IsReceived = true;
+                                }
                             }
                             Data.Trim();
                             Global.Mlog.Info($"{PortName} : {Port} Receive '{Data}'");

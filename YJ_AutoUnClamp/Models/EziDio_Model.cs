@@ -41,8 +41,8 @@ namespace YJ_AutoUnClamp.Models
             UNLOAD_LD_Z_GRIP_CYL,          // X15
             UNLOAD_LD_Z_GRIP_DETECT,       // X16
             UNCLAMP_CV_DETECT,              // X17
-            UNCLAMP_CV_CENTERING_FWD_CYL,         // X18
-            UNCLAMP_CV_CENTERING_BWD_CYL,        // X19
+            UNCLAMP_CV_CENTERING_FWD_CYL,   // X18
+            UNCLAMP_CV_CENTERING_BWD_CYL,   // X19
             UNCLAMP_CV_UP_CYL,              // X1A
             UNCLAMP_CV_DOWN_CYL,            // X1B
             OUT_PP_LEFT_Z_UP_CYL,           // X1C
@@ -55,7 +55,7 @@ namespace YJ_AutoUnClamp.Models
             OUT_PP_TR_RIGHT_Z_UP_CYL,       // X22
             OUT_PP_TR_RIGHT_Z_DOWN_CYL,    // X23
             OUT_PP_TR_RIGHT_Z_VACUUM,       // X24
-            X025,
+            UNCLAMP_SET_DETECT,             // X25
             TOP_JIG_CV_DETECT_1,            // X26
             TOP_JIG_CV_DETECT_2,            // X27
             TOP_RETURN_X_LEFT_CYL,          // X28
@@ -64,8 +64,8 @@ namespace YJ_AutoUnClamp.Models
             TOP_RETURN_Z_DOWN,              // X2B
             TOP_RETURN_Z_GRIP,              // X2C
             TOP_RETURN_Z_UNGRIP,            // X2D
-            BOTTOM_RETURN_X_LEFT,        // X2E
-            BOTTOM_RETURN_X_RIGHT,       // X2F
+            BOTTOM_RETURN_X_LEFT,           // X2E
+            BOTTOM_RETURN_X_RIGHT,          // X2F
             //X030~X03F
             BOTTOM_RETURN_Z_UP,             // X30
             BOTTOM_RETURN_Z_DOWN,           // X31
@@ -81,7 +81,8 @@ namespace YJ_AutoUnClamp.Models
             OUT_PP_RIGHT_RETURN,            // X3B
             RIGHT_L_DOOR,                   // X3C
             RIGHT_R_DOOR,                   // X3D
-            X03E,X03F,      
+            NG_CV_DETECT1,                  // X3E
+            NG_CV_DETECT2,                  // X3F      
             //X040~X04F
             AGING_CV_1_UPPER_INTERFACE,     // X40
             AGING_CV_1_LOW_INTERFACE,       // X41
@@ -98,7 +99,7 @@ namespace YJ_AutoUnClamp.Models
             UNLOAD_Z_GRIP,                     // X4C
             UNLOAD_Z_UNGRIP,                   // X4D
             UNLOAD_BUFFER,                  // X4E
-            X04F,
+            UNLOAD_BUFFER2,                 // X4F
             DI_MAX
         }
         public enum DO_MAP
@@ -122,26 +123,27 @@ namespace YJ_AutoUnClamp.Models
             LIFT_CV_RUN_1,                      // Y013
             LIFT_CV_RUN_2,                      // Y014
             LIFT_CV_RUN_3,                      // Y015
-            Y16,Y17,
-            UNLOAD_LD_Z_GRIP,                 // Y018
+            NG_CV_RUN,                          // Y016
+            Y17,
+            UNLOAD_LD_Z_GRIP,                   // Y018
             UNCLAMP_CV_CENTERING,               // Y19
-            UNCLAMP_CV_STOPPER_UP,                    // Y01A
-            UNCLAMP_LEFT_Z_DOWN,                   // Y01B
-            UNCLAMP_LEFT_Z_GRIP,                 // Y01C
-            UNCLAMP_LEFT_Z_GRIP_F_FINGER,        // Y01D
-            UNCLAMP_RIGHT_Z_DOWN,                // Y01E
-            UNCLAMP_RIGHT_Z_VACUUM,              // Y01F
+            UNCLAMP_CV_STOPPER_UP,              // Y01A
+            UNCLAMP_LEFT_Z_DOWN,                // Y01B
+            UNCLAMP_LEFT_Z_GRIP,                // Y01C
+            UNCLAMP_LEFT_Z_GRIP_F_FINGER,       // Y01D
+            UNCLAMP_RIGHT_Z_DOWN,               // Y01E
+            UNCLAMP_RIGHT_Z_VACUUM,             // Y01F
             // Y020 ~ Y02F
             TOP_RETURN_X_FWD,                   // Y020
-            TOP_RETURN_Z_DOWN,                    // Y021
+            TOP_RETURN_Z_DOWN,                  // Y021
             TOP_RETURN_Z_GRIP,                  // Y022
             BOTTOM_RETURN_X_FWD,                // Y023
-            BOTTOM_RETURN_Z_DOWN,                 // Y024
+            BOTTOM_RETURN_Z_DOWN,               // Y024
             BOTTOM_RETURN_Z_GRIP,               // Y025
             OUT_PP_RIGHT_Z_BLOW,                // Y026
-            UNLOAD_X_FWD,                         // Y027
-            UNLOAD_Z_DOWN,                          // Y028
-            UNLOAD_Z_GRIP,                        // Y029
+            UNLOAD_X_FWD,                       // Y027
+            UNLOAD_Z_DOWN,                      // Y028
+            UNLOAD_Z_GRIP,                      // Y029
             OUT_PP_LEFT_Z_GRIP_R_FINGER,        // Y02A
             OUT_PP_RIGHT_TURN,                  // Y02B
             Y02C, Y02D,Y02E,Y02F,
