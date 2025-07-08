@@ -112,6 +112,12 @@ namespace YJ_AutoUnClamp
             get { return _TactTimeStart; }
             set { SetValue(ref _TactTimeStart, value); }
         }
+        private double[] _AverageTactTime = new double[10];
+        public double[] AverageTactTime
+        {
+            get { return _AverageTactTime; }
+            set { SetValue(ref _AverageTactTime, value); }
+        }
         private Global()
         {
             // Date Timer
@@ -237,9 +243,16 @@ namespace YJ_AutoUnClamp
 
             myIni.Write(DateTime.Now.ToString("HH:mm:ss:fff"), cn + " - " +Result, section);
         }
+        public void UnLoadingTactTimeReset()
+        {
+            TactTimeStart = false;
+            TactTimeSw.Reset();
+            SingletonManager.instance.Channel_Model[0].TactTime = "0.0"; // 초기화 시 TactTime을 0.0으로 설정
+        }
         public void UnLoadingTactTimeStart()
         {
             TactTimeSw.Restart();
+            TactTimeStart = true;
         }
         public void UnLoadingTactTimeEnd()
         {
@@ -253,6 +266,23 @@ namespace YJ_AutoUnClamp
                 double tt = Math.Round((TactTimeSw.ElapsedMilliseconds / 1000.0), 1);
 ;                SingletonManager.instance.Channel_Model[0].TactTime = tt.ToString();
             }
+        }
+        public void AverageTacttimeUpdate()
+        {
+            // 배열에서 가장 오래된 값을 제거하고 새 값을 추가
+            for (int i = AverageTactTime.Length - 1; i > 0; i--)
+            {
+                AverageTactTime[i] = AverageTactTime[i - 1];
+            }
+            AverageTactTime[0] = Convert.ToDouble(SingletonManager.instance.Channel_Model[0].TactTime);
+            // 평균 계산
+            double sum = 0;
+            for (int i = 0; i < AverageTactTime.Length; i++)
+            {
+                sum += AverageTactTime[i];
+            }
+            double average = sum / AverageTactTime.Length;
+            SingletonManager.instance.Channel_Model[0].AverageTactTime = average.ToString("F1");
         }
         public void WriteAlarmLog(string message, string section = "ALARM")
         {

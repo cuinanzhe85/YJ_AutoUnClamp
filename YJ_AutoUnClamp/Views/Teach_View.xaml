@@ -284,11 +284,11 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_Handler"
+                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_X"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=14, Mode=TwoWay}"/>
-                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="1" Content="L Pick Up" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_Handler"
+                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="1" Content="L Pick Up" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_X"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=15, Mode=TwoWay}"/>
-                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="1" Content="R Pick Up" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_Handler"
+                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="1" Content="R Pick Up" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="Top_X"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=16, Mode=TwoWay}"/>
                     </Grid>
                 </Grid>
@@ -327,9 +327,9 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Ready" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Ready" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Y"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=0, Mode=TwoWay}"/>
-                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Y"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=1, Mode=TwoWay}"/>
                         <Grid Grid.Row="1" Grid.ColumnSpan="2">
                             <Grid.ColumnDefinitions>
@@ -337,11 +337,11 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <telerik:RadRadioButton Grid.Column="0" Content="Lift 1" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="0" Content="Lift 1" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Y"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=2, Mode=TwoWay}"/>
-                            <telerik:RadRadioButton Grid.Column="1" Content="Lift 2" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="1" Content="Lift 2" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Y"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=3, Mode=TwoWay}"/>
-                            <telerik:RadRadioButton Grid.Column="2" Content="Lift 3" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="2" Content="Lift 3" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Y"
                                                 IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=4, Mode=TwoWay}"/>
                         </Grid>
                     </Grid>
@@ -380,9 +380,9 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Ready" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                        <telerik:RadRadioButton Grid.Column="0" Grid.Row="0" Content="Ready" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                     IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=5, Mode=TwoWay}"/>
-                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                        <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                     IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=6, Mode=TwoWay}"/>
 
                         <Grid Grid.Row="1" Grid.ColumnSpan="2">
@@ -393,15 +393,15 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <telerik:RadRadioButton Grid.Column="0" Content="1F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="0" Content="1F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=7, Mode=TwoWay}" Margin="5,5,2,5"/>
-                            <telerik:RadRadioButton Grid.Column="1" Content="2F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="1" Content="2F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=8, Mode=TwoWay}" Margin="2,5,2,5"/>
-                            <telerik:RadRadioButton Grid.Column="2" Content="3F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="2" Content="3F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=9, Mode=TwoWay}" Margin="2,5,2,5"/>
-                            <telerik:RadRadioButton Grid.Column="3" Content="4F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="3" Content="4F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=10, Mode=TwoWay}" Margin="2,5,2,5"/>
-                            <telerik:RadRadioButton Grid.Column="4" Content="5F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="4" Content="5F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=11, Mode=TwoWay}" Margin="2,5,2,5"/>
                             <!--<telerik:RadRadioButton Grid.Column="5" Content="6F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=12, Mode=TwoWay}" Margin="2,5,2,5"/>

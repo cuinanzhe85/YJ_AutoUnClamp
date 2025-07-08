@@ -185,6 +185,25 @@ namespace YJ_AutoUnClamp.ViewModels
                     TcpReceiveData = "Empty";
                     await Tcp_DataSend();
                     break;
+                case "CONNECT":
+                    Tcp_Connect();
+                    break;
+            }
+        }
+        private void Tcp_Connect()
+        {
+            if (SingletonManager.instance.IsTcpConnected == true)
+                SingletonManager.instance.TcpClient.Disconnect();
+
+            if (SingletonManager.instance.TcpClient.Connect() == true)
+            {
+                Global.Mlog.Info("TCP Connect Success.");
+                MessageBox.Show("TCP Connect Success.", "TCP", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                Global.Mlog.Info("TCP Connect Fail.");
+                MessageBox.Show("TCP Connect Fail.", "TCP", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         private async Task Tcp_DataSend()

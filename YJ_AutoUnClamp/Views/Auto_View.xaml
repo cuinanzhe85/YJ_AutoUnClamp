@@ -74,23 +74,24 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="0.18*"/>
-                                <RowDefinition Height="0.1*"/>
-                                <RowDefinition Height="0.18*"/>
-                                <RowDefinition Height="0.18*"/>
-                                <RowDefinition Height="0.18*"/>
-                                <RowDefinition Height="0.18*"/>
+                                <RowDefinition Height="0.166*"/>
+                                <RowDefinition Height="0.166*"/>
+                                <RowDefinition Height="0.166*"/>
+                                <RowDefinition Height="0.166*"/>
+                                <RowDefinition Height="0.166*"/>
+                                <RowDefinition Height="0.166*"/>
                             </Grid.RowDefinitions>
-                            <Label Grid.Row="0" Grid.Column="0" Content="T/T (Sec)" Margin="0,2,0,2" Background="LightSlateGray" Foreground="White" FontSize="12" FontWeight="Bold" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" telerik:CornerRadiusHelper.ClipRadius="8,0,0,8"/>
+                            <Label Grid.Row="0" Grid.ColumnSpan="2" Content="Tact Time (Sec)" Background="LightSlateGray" Style="{StaticResource Inside_LabelStyle}" FontSize="14"  Margin="0,2,0,2" Foreground="White"/>
+                            <Label Grid.Row="1" Grid.Column="0" Content="Tact Time" Style="{StaticResource Inspection_Label}" Margin="0,-5,0,0"/>
+                            <Label Grid.Row="2" Grid.Column="0" Content="Average" Style="{StaticResource Inspection_Label}" Margin="0,-5,0,0"/>
 
-                            <Label Grid.Row="2" Grid.ColumnSpan="2" Content="Current Set Count" Background="LightSlateGray" Style="{StaticResource Inside_LabelStyle}" FontSize="14"  Margin="0,-5,0,2" Foreground="White"/>
-                            <Label Grid.Row="3" Grid.Column="0" Content="Input C/V" FontSize="12" Margin="0,2,0,2" FontWeight="Bold" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Background="LightGray" telerik:CornerRadiusHelper.ClipRadius="8,0,0,8"/>
-                            <Label Grid.Row="4" Grid.Column="0" Content="UnLoader" FontSize="12" Margin="0,2,0,2" FontWeight="Bold" Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Background="LightGray" telerik:CornerRadiusHelper.ClipRadius="8,0,0,8"/>
+                            <Label Grid.Row="3" Grid.ColumnSpan="2" Content="Current Set Count" Background="LightSlateGray" Style="{StaticResource Inside_LabelStyle}" FontSize="14"  Margin="0,2,0,2" Foreground="White"/>
+                            <Label Grid.Row="4" Grid.Column="0" Content="UnLoading" Style="{StaticResource Inspection_Label}"/>
 
-                            <Label Grid.Row="0" Grid.Column="2" Content="{Binding Channels[0].TactTime}"  Style="{StaticResource InspectionData_LableStyle}" FontSize="15"/>
-                            <Label Grid.Row="3" Grid.Column="2" Content="{Binding Channels[0].InputCount}" Style="{StaticResource InspectionData_LableStyle}" FontSize="15"/>
-                            <Label Grid.Row="4" Grid.Column="2" Content="{Binding Channels[0].UnLoadCount}" Style="{StaticResource InspectionData_LableStyle}" FontSize="15"/>
-                            <Label Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Content="IP : 192.168.10.20" Margin="0,2,0,2" FontSize="15" FontWeight="Bold" Padding="0" 
+                            <telerik:RadWatermarkTextBox Grid.Row="1" Grid.Column="2" Text="{Binding Channels[0].TactTime}"  Style="{StaticResource Count_TextStyle}" Margin="0,0,0,5"/>
+                            <telerik:RadWatermarkTextBox Grid.Row="2" Grid.Column="2" Text="{Binding Channels[0].AverageTactTime}"  Style="{StaticResource Count_TextStyle}" Margin="0,0,0,5"/>
+                            <telerik:RadWatermarkTextBox Grid.Row="4" Grid.Column="2" Text="{Binding Channels[0].UnLoadCount}" Style="{StaticResource Count_TextStyle}"/>
+                            <Label Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Content="IP : 192.168.10.20" Margin="0,5,0,2" FontSize="15" FontWeight="Bold" Padding="0" 
                                     Background="{Binding Source={x:Static local:SingletonManager.instance}, Path=IsTcpConnected, Converter={StaticResource ConnectionColorConverter}}" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderThickness="0,0,0,0" BorderBrush="Black" telerik:CornerRadiusHelper.ClipRadius="8"/>
 
                         </Grid> 
@@ -365,8 +366,8 @@
                 <DropShadowEffect ShadowDepth="2"/>
             </Grid.Effect>
             <Grid.RowDefinitions>
-                <RowDefinition Height="0.75*"/>
-                <RowDefinition Height="0.25*"/>
+                <RowDefinition Height="0.8*"/>
+                <RowDefinition Height="0.2*"/>
             </Grid.RowDefinitions>
             <!--Buttons-->
             <StackPanel>
@@ -390,7 +391,7 @@
             </StackPanel>
 
             <!--Products Infomations-->
-            <StackPanel Grid.Row="1">
+            <StackPanel Grid.Row="1" Margin="0,-5,0,0">
                 <telerik:RadButton Content="Inspection Start" Style="{StaticResource AutoView_ButtonStyle}"
                                         IsEnabled="{Binding Source={x:Static local:SingletonManager.instance}, Path=IsInspectionStart, Converter={StaticResource ReversBoolConverter}}"
                                         Command="{Binding RightMenu_PopupCommand}" CommandParameter="Start" Background="CadetBlue"/>
