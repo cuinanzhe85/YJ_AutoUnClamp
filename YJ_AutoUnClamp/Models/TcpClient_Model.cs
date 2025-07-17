@@ -22,7 +22,7 @@ namespace YJ_AutoUnClamp.Models
         private byte ETX = 0x03;
 
         private bool _ReconnectThreadRun = false;
-        private string IpAddress = "127.0.0.1";//"192.168.10.20";
+        private string IpAddress = "192.168.10.20";
         private int Port = 8000;
         private string _TcpReceiveData = string.Empty;
         public string TcpReceiveData
