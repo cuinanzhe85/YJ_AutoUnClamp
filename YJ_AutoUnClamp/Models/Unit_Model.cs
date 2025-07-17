@@ -1915,7 +1915,7 @@ namespace YJ_AutoUnClamp.Models
                     break;
                 case Unload_Y_Step.Grip_Detect_Check:
                     // Detect sensor delay time
-                    if (_TimeDelay.ElapsedMilliseconds > 00
+                    if (_TimeDelay.ElapsedMilliseconds > 100
                         || Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_GRIP_DETECT] == true)
                     {
                         if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_GRIP_DETECT] == true
