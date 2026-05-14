@@ -193,7 +193,9 @@ namespace YJ_AutoUnClamp.ViewModels
         private void Tcp_Connect()
         {
             if (SingletonManager.instance.IsTcpConnected == true)
+            {
                 SingletonManager.instance.TcpClient.Disconnect();
+            }
 
             if (SingletonManager.instance.TcpClient.Connect() == true)
             {

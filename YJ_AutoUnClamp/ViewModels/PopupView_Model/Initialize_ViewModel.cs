@@ -301,8 +301,8 @@ namespace YJ_AutoUnClamp.ViewModels
                     && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.TOP_RETURN_Z_UP] == true
                     && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.BOTTOM_RETURN_Z_UP] == true
                     && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_LEFT_Z_UNGRIP_CYL] == true
-                    && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_F_CYL] == false
-                    && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_R_CYL] == false)
+                    && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_LEFT_Z_UNGRIP_FINGER_F_CYL] == true
+                    && Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.OUT_PP_LEFT_Z_UNGRIP_FINGER_R_CYL] == true)
                     {
                         result = true;
                         break; // 성공 시 루프 종료

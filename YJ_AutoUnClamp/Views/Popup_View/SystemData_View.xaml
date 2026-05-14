@@ -76,6 +76,9 @@
                 <Label Content="NFC Delay(ms)" Grid.Row="1" Grid.Column="0" Style="{StaticResource Option_LabelStyle}"/>
                 <telerik:RadWatermarkTextBox Grid.Row="1" Grid.Column="1" Text="{Binding NfcDelay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Option_TextStyle}"/>
 
+                <Label Content="Grip Delay(ms)" Grid.Row="2" Grid.Column="0" Style="{StaticResource Option_LabelStyle}"/>
+                <telerik:RadWatermarkTextBox Grid.Row="2" Grid.Column="1" Text="{Binding GripDelay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Option_TextStyle}"/>
+
                 <!--<StackPanel Grid.Row="1" Grid.Column="2">
                     <Label Content="prodcMagtNo" Foreground="Gray" Style="{StaticResource Option_LabelStyle}" Height="30" FontSize="15" Margin="5,0"/>
                     <telerik:RadWatermarkTextBox Text="{Binding HttpSendData, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Option_TextStyle}"/>

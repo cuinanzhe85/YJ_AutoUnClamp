@@ -30,6 +30,12 @@ namespace YJ_AutoUnClamp.Models
             get { return _NfcDelay; }
             set { SetValue(ref _NfcDelay, value); }
         }
+        public int _GripDelay;
+        public int GripDelay
+        {
+            get { return _GripDelay; }
+            set { SetValue(ref _GripDelay, value); }
+        }
         private string _AgingTime;
         public string AgingTime
         {

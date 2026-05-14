@@ -215,13 +215,13 @@ namespace YJ_AutoUnClamp.ViewModels
                     }
                     break;
                 case "UnloadCV":
-                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.INPUT_LEFT_SET_CV_RUN] == false)
+                    if (Dio.DO_RAW_DATA[(int)EziDio_Model.DO_MAP.INPUT_LIFT_SET_CV_RUN] == false)
                     {
-                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.INPUT_LEFT_SET_CV_RUN, true);
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.INPUT_LIFT_SET_CV_RUN, true);
                     }
                     else
                     {
-                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.INPUT_LEFT_SET_CV_RUN, false);
+                        Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.INPUT_LIFT_SET_CV_RUN, false);
                     }
                     break;
                

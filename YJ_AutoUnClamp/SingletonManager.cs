@@ -199,6 +199,9 @@ namespace YJ_AutoUnClamp
 
             valus = myIni.Read("NFC_DELAY_TIME", section);
             SystemModel.NfcDelay = valus;
+
+            valus = myIni.Read("GRIP_DELAY_TIME", section);
+            SystemModel.GripDelay = Int32.TryParse(valus, out int gripDelay) ? gripDelay : 300;
         }
        
         public void LoadTeachFile()

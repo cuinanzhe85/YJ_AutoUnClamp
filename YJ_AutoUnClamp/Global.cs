@@ -9,18 +9,14 @@ using log4net.Repository;
 using log4net.Repository.Hierarchy;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Threading;
-using Telerik.Windows.Controls.FileDialogs;
 using YJ_AutoUnClamp.Models;
-using YJ_AutoUnClamp.ViewModels;
 
 namespace YJ_AutoUnClamp
 {
@@ -343,7 +339,7 @@ namespace YJ_AutoUnClamp
                 case TowerLampType.OutputStop:
                     SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOWER_LAMP_RED, false);
                     SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOWER_LAMP_YELLOW, true);
-                    SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOWER_LAMP_GREEN, true);
+                    SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.TOWER_LAMP_GREEN, false);
                     break;
             }
         }

@@ -63,6 +63,12 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _AgingBarcodFilePath; }
             set { SetValue(ref _AgingBarcodFilePath, value); }
         }
+        private int _GripDelay;
+        public int GripDelay
+        {
+            get { return _GripDelay; }
+            set { SetValue(ref _GripDelay, value); }
+        }
         public SystemData_ViewModel()
         {
             UseNotUse.Add("Not Use");
@@ -74,6 +80,7 @@ namespace YJ_AutoUnClamp.ViewModels
             TopCode = SingletonManager.instance.SystemModel.TopCode;
             AgingBarcodFilePath = SingletonManager.instance.SystemModel.AgingBarcodFilePath;
             NfcDelay = SingletonManager.instance.SystemModel.NfcDelay;
+            GripDelay = SingletonManager.instance.SystemModel.GripDelay;
         }
         private void OnSave_Command(object obj)
         {
@@ -108,6 +115,10 @@ namespace YJ_AutoUnClamp.ViewModels
                 Global.Mlog.Info(" NFC_DELAY_TIME = " + NfcDelay);
 
                 SingletonManager.instance.SystemModel.NfcDelay = NfcDelay;
+
+                myIni.Write("GRIP_DELAY_TIME", GripDelay.ToString(), Section);
+                Global.Mlog.Info(" GRIP_DELAY_TIME = " + GripDelay.ToString());
+                SingletonManager.instance.SystemModel.GripDelay = GripDelay;
 
                 //myIni.Write("AGINT_BARCODE_FILE_PATH", AgingBarcodFilePath, Section);
                 //Global.Mlog.Info(" AGINT_BARCODE_FILE_PATH = " + AgingTime);

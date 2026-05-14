@@ -50,8 +50,8 @@ namespace YJ_AutoUnClamp.Models
             OUT_PP_LEFT_Z_GRIP_CYL,         // X1E
             OUT_PP_LEFT_Z_UNGRIP_CYL,       // X1F
             //X020~X02F 
-            OUT_PP_LEFT_Z_GRIP_FINGER_F_CYL, // X20
-            OUT_PP_LEFT_Z_GRIP_FINGER_R_CYL,// X21
+            OUT_PP_LEFT_Z_UNGRIP_FINGER_F_CYL, // X20
+            OUT_PP_LEFT_Z_UNGRIP_FINGER_R_CYL,// X21
             OUT_PP_TR_RIGHT_Z_UP_CYL,       // X22
             OUT_PP_TR_RIGHT_Z_DOWN_CYL,    // X23
             OUT_PP_TR_RIGHT_Z_VACUUM,       // X24
@@ -117,7 +117,7 @@ namespace YJ_AutoUnClamp.Models
             INTERFACE_REAR_MC_SEND,             // Y009
             Y00A, Y00B, Y00C, Y00D, Y00E, Y00F,
             // Y010 ~ Y01F
-            INPUT_LEFT_SET_CV_RUN,              // Y010
+            INPUT_LIFT_SET_CV_RUN,              // Y010
             UNCLAMP_CV_RUN,                     // Y011
             TOP_JIG_CV_RUN,                     // Y012
             LIFT_CV_RUN_1,                      // Y013
@@ -184,8 +184,8 @@ namespace YJ_AutoUnClamp.Models
             (int)DI_MAP.OUT_PP_LEFT_Z_DOWN_CYL,         //7
             (int)DI_MAP.OUT_PP_LEFT_Z_GRIP_CYL,         //8
             (int)DI_MAP.OUT_PP_LEFT_Z_UNGRIP_CYL,       //9
-            (int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_F_CYL,//10
-            (int)DI_MAP.OUT_PP_LEFT_Z_GRIP_FINGER_R_CYL,//11
+            (int)DI_MAP.OUT_PP_LEFT_Z_UNGRIP_FINGER_F_CYL,//10
+            (int)DI_MAP.OUT_PP_LEFT_Z_UNGRIP_FINGER_R_CYL,//11
             (int)DI_MAP.OUT_PP_TR_RIGHT_Z_UP_CYL,       //12
             (int)DI_MAP.OUT_PP_TR_RIGHT_Z_DOWN_CYL,     //13
             (int)DI_MAP.OUT_PP_TR_RIGHT_Z_VACUUM,       //14
