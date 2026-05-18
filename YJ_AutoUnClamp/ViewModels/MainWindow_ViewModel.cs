@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using YJ_AutoUnClamp.Models;
 using YJ_AutoUnClamp.Utils;
+using YJ_AutoUnClamp.ViewModels.PopupView_Model;
 
 namespace YJ_AutoUnClamp.ViewModels
 {
@@ -36,7 +37,7 @@ namespace YJ_AutoUnClamp.ViewModels
         #region // Popup Manager
         enum MainWindow_PopupList
         {
-            Gocator
+            StepViewer
         }
         private readonly Dictionary<MainWindow_PopupList, Func<(Window, Child_ViewModel)>> PopupFactories;
         #endregion
@@ -53,7 +54,7 @@ namespace YJ_AutoUnClamp.ViewModels
             get { return _SoftwareName; }
             set { SetValue(ref _SoftwareName, value); }
         }
-        private string _SoftwareVersion = "[ 26-05-14 T1 ]";
+        private string _SoftwareVersion = "260514.1";
         public string SoftwareVersion
         {
             get { return _SoftwareVersion; }
@@ -80,6 +81,10 @@ namespace YJ_AutoUnClamp.ViewModels
             Modules.Add(new ModuleDescription() { ModuleType = typeof(DioManager_ViewModel), ViewType = typeof(DioManager_View) });
             ModulesManager = new ModulesManager(new ViewsManager(Modules), Modules);
 
+            PopupFactories = new Dictionary<MainWindow_PopupList, Func<(Window, Child_ViewModel)>>
+            {
+                { MainWindow_PopupList.StepViewer, () => (new Step_View(), new Step_ViewModel()) },
+            };
             // Loading Backgorund Thread
             bgWorkerLoading = new BackgroundWorker()
             {
@@ -192,8 +197,8 @@ namespace YJ_AutoUnClamp.ViewModels
                 case "Hide":
                     WindowManager.Instance.MinimizeCommand.Execute("Main");
                     break;
-                case "Gocator":
-                    PopupManager.ShowPopupView(PopupFactories, MainWindow_PopupList.Gocator);
+                case "StepViewer":
+                    PopupManager.ShowPopupView(PopupFactories, MainWindow_PopupList.StepViewer);
                     break;
                 case "Exit":
                     Application.Current.Dispatcher.BeginInvoke(

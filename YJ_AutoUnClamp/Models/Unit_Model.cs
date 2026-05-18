@@ -1967,7 +1967,7 @@ namespace YJ_AutoUnClamp.Models
                         {
                             UnloadYPutDownMoving = false;
                             SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY] = 0;
-                            39 = 0;
+                            UnloadingLiftIndexY = 0;
                             if (Ez_Model.IsMovePickUpPosY(2) == false)
                             {
                                 Ez_Model.MovePickUpPosY(2);
