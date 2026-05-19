@@ -201,18 +201,11 @@ namespace YJ_AutoUnClamp.ViewModels
                     PopupManager.ShowPopupView(PopupFactories, MainWindow_PopupList.StepViewer);
                     break;
                 case "Exit":
-                    Application.Current.Dispatcher.BeginInvoke(
-                                (ThreadStart)(() =>
-                                {
-                                    var msgBox = new MessageBoxYesNo_View("Confirm! Are You Ready Exit Program?");
-                                    bool? result = msgBox.ShowDialog();
-                                    if (result == true)
-                                    {
-                                        // Yes 클릭
-                                        SoftwareExit();
-                                    }
-
-                                }), DispatcherPriority.Send);
+                    if (Global.instance.ShowMessagebox("Confirm! Are You Ready Exit Program?", false, false, false, true) == true)
+                    {
+                        // Yes 클릭
+                        SoftwareExit();
+                    }
                     break;
             }
         }

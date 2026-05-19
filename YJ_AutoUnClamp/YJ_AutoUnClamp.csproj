@@ -58,6 +58,7 @@
   <PropertyGroup>
     <ApplicationIcon>Logo.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="Costura, Version=6.0.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d, processorArchitecture=MSIL">
       <HintPath>..\packages\Costura.Fody.6.0.0\lib\netstandard2.0\Costura.dll</HintPath>
@@ -174,6 +175,7 @@
     <Compile Include="Models\EzMotion_Model_R.cs" />
     <Compile Include="Models\Serial_Model.cs" />
     <Compile Include="Models\Servo_Model.cs" />
+    <Compile Include="ViewModels\PopupView_Model\ModelChange_ViewModel.cs" />
     <Compile Include="ViewModels\PopupView_Model\Step_ViewModel.cs" />
     <Compile Include="Models\SystemData_Model.cs" />
     <Compile Include="Models\TcpClient_Model.cs" />
@@ -240,6 +242,9 @@
     </Compile>
     <Compile Include="Views\Popup_View\MessageBox_View.xaml.cs">
       <DependentUpon>MessageBox_View.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Popup_View\ModelChange_View.xaml.cs">
+      <DependentUpon>ModelChange_View.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Popup_View\ModelData_View.xaml.cs">
       <DependentUpon>ModelData_View.xaml</DependentUpon>
@@ -345,6 +350,10 @@
     <Page Include="Views\Popup_View\MessageBox_View.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Popup_View\ModelChange_View.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Popup_View\ModelData_View.xaml">
       <SubType>Designer</SubType>

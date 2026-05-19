@@ -60,6 +60,13 @@ namespace YJ_AutoUnClamp
             get { return _IsTcpConnected; }
             set { SetValue(ref _IsTcpConnected, value); }
         }
+        private string _TeachFileName = string.Empty;
+        public string TeachFileName
+        {
+            get { return _TeachFileName; }
+            set { SetValue(ref _TeachFileName, value); }
+        }
+        
         // Default Infomation
         public EquipmentMode EquipmentMode { get; set; } = EquipmentMode.Auto;
 
@@ -202,12 +209,16 @@ namespace YJ_AutoUnClamp
 
             valus = myIni.Read("GRIP_DELAY_TIME", section);
             SystemModel.GripDelay = Int32.TryParse(valus, out int gripDelay) ? gripDelay : 300;
+
+            // Teach File Name
+            valus = myIni.Read("CURRENT_TEACH", section);
+            TeachFileName = valus;
         }
        
         public void LoadTeachFile()
         {
             // Teaching Data 섹션 데이터 로드
-            string teachFilePath = Path.Combine(Global.instance.IniTeachPath);
+            string teachFilePath = Path.Combine(Global.instance.IniTeachPath, TeachFileName) + ".ini";
             var iniTeachFile = new IniFile(teachFilePath);
 
             string[] teachSection = { "Top_X", "In_Y", "In_Z", "Lift" };

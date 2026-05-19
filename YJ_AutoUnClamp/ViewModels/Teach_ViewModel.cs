@@ -510,7 +510,7 @@ namespace YJ_AutoUnClamp.ViewModels
             {
                 return;
             }
-            string teachFilePath = Path.Combine(Global.instance.IniTeachPath);
+            string teachFilePath = Path.Combine(Global.instance.IniTeachPath + SingletonManager.instance.TeachFileName) + ".ini";
             var iniFile = new IniFile(teachFilePath);
             string section = obj.ToString();
             if (section == "Lift")

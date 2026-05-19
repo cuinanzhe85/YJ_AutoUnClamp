@@ -76,7 +76,7 @@ namespace YJ_AutoUnClamp
         public string IniConfigPath { get; set; } = Environment.CurrentDirectory + @"\Config";
         public string IniSystemPath { get; set; } = Environment.CurrentDirectory + @"\Config\System.ini";
         public string IniVelocityPath { get; set; } = Environment.CurrentDirectory + @"\Config\Velocity.ini";
-        public string IniTeachPath { get; set; } = Environment.CurrentDirectory + @"\Config\Teach\Teaching.ini";
+        public string IniTeachPath { get; set; } = Environment.CurrentDirectory + @"\Config\Teach";
         public string IniSpecPath { get; set; } = Environment.CurrentDirectory + @"\Config\Spec";
         public string AlarmLogPath { get; set; } = Environment.CurrentDirectory + @"\Alarm";
         public string IniMesLogPath { get; set; } = Environment.CurrentDirectory + @"\MES";
@@ -343,38 +343,52 @@ namespace YJ_AutoUnClamp
                     break;
             }
         }
-        public void ShowMessagebox(string message, bool isError = true, bool buzzOn = false, bool Alarm = false)
+        public bool ShowMessagebox(string message, bool isError = true, bool buzzOn = false, bool Alarm = false, bool IsYesNo = false)
         {
             try
             {
-                // UI 쓰레드에서 동작하도록 보장
-                Application.Current.Dispatcher.Invoke(() =>
+                if (IsYesNo == false)
                 {
-                    SendMainUiLog(message, UiLogType.Error);
-                    if (buzzOn == true)
+                    // UI 쓰레드에서 동작하도록 보장
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Global.instance.Set_TowerLamp(Global.TowerLampType.Error);
-                        SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
-                        var view = new MessageBox_View(message, isError);
-                        view.ShowDialog();
-                        Global.instance.Set_TowerLamp(Global.TowerLampType.Stop);
-                        SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
-                    }
-                    else if (Alarm == true)
+                        SendMainUiLog(message, UiLogType.Error);
+                        if (buzzOn == true)
+                        {
+                            Global.instance.Set_TowerLamp(Global.TowerLampType.Error);
+                            SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+                            var view = new MessageBox_View(message, isError);
+                            view.ShowDialog();
+                            Global.instance.Set_TowerLamp(Global.TowerLampType.Stop);
+                            SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+                        }
+                        else if (Alarm == true)
+                        {
+                            Mlog.Info($"Error Message : {message}");
+                            SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
+                            Thread.Sleep(1200);
+                            SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
+                            var view = new MessageBox_View(message, isError);
+                            view.ShowDialog();
+                        }
+                        else
+                        {
+                            var view = new MessageBox_View(message, isError);
+                            view.Show();
+                        }
+                    });
+                }
+                else
+                {
+                    bool? result = null;
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Mlog.Info($"Error Message : {message}");
-                        SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, true);
-                        Thread.Sleep(1200);
-                        SingletonManager.instance.Dio.SetIO_OutputData((int)EziDio_Model.DO_MAP.BUZZER, false);
-                        var view = new MessageBox_View(message, isError);
-                        view.ShowDialog();
-                    }
-                    else
-                    {
-                        var view = new MessageBox_View(message, isError);
-                        view.Show();
-                    }
-                });
+                        var view = new MessageBoxYesNo_View(message);
+                        result = view.ShowDialog();
+                    });
+                    return result == true; // Yes 선택 시 true 반환, No 선택 시 false 반환
+                }
+                return true;
             }
             catch (Exception ex)
             {
@@ -383,6 +397,7 @@ namespace YJ_AutoUnClamp
                 {
                     MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 });
+                return false;
             }
         }
         public async Task<bool> InspectionStart()
