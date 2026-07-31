@@ -120,7 +120,9 @@ namespace YJ_AutoUnClamp
             }
             Display_Lift = new ObservableCollection<Lift_Model>();
             for (int i = 0; i < 3; i++)
+            {
                 Display_Lift.Add(new Lift_Model("LIFT" + (i + 1)));
+            }
 
             // Channel Model 초기화
             for (int i = 0; i < (int)ChannelList.Max; i++)
@@ -151,8 +153,10 @@ namespace YJ_AutoUnClamp
             Global.instance.BusyStatus = false;
             Global.instance.BusyContent = string.Empty;
 
-            // TCP Connect   
-            TcpClient.Connect();
+            // TCP Connect
+            Task.Run(() => {
+                TcpClient.Connect();
+            });
         }
         private void LoadSystemFiles()
         {
@@ -214,7 +218,6 @@ namespace YJ_AutoUnClamp
             valus = myIni.Read("CURRENT_TEACH", section);
             TeachFileName = valus;
         }
-       
         public void LoadTeachFile()
         {
             // Teaching Data 섹션 데이터 로드
@@ -487,7 +490,7 @@ namespace YJ_AutoUnClamp
                             || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_OP_EMERGENCY_FEEDBACK])
                         {
                             Global.instance.SafetyErrorMessage = "EMERGENCY Button Operation! ";
-                            //IsSafetyInterLock = true;
+                            IsSafetyInterLock = true;
                         }
                         if (IsSafetyInterLock == true)
                         {

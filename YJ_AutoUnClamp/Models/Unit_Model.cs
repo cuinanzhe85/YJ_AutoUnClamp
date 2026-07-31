@@ -55,6 +55,7 @@ namespace YJ_AutoUnClamp.Models
         Floor_3,
         Floor_4,
         Floor_5,
+        Floor_6,
         Max
     }
     
@@ -222,6 +223,8 @@ namespace YJ_AutoUnClamp.Models
             Move_Y_PickUp_Done,
             Move_Z_PickUp_Down_Done,
             Grip_Detect_Check,
+            Centering_Grip_On,
+            Centering_Grip_Off,
             Grip_Check,
             Move_Z_Ready_Done,
             Move_Y_PutDown_Done,
@@ -405,7 +408,8 @@ namespace YJ_AutoUnClamp.Models
                                 }
                                 else if (SingletonManager.instance.Channel_Model[0].MesResult == "NG"
                                     || SingletonManager.instance.Channel_Model[0].MesResult == "TIMEOUT"
-                                    || SingletonManager.instance.Channel_Model[0].MesResult == "FAIL")
+                                    || SingletonManager.instance.Channel_Model[0].MesResult == "FAIL"
+                                    || SingletonManager.instance.Channel_Model[0].MesResult == "")
                                 {
                                     Dio_Output(DO_MAP.UNCLAMP_CV_CENTERING, false);
                                     Dio_Output(DO_MAP.UNCLAMP_CV_STOPPER_UP, false);
@@ -1421,8 +1425,9 @@ namespace YJ_AutoUnClamp.Models
                             Global.Mlog.Info($"Lift_Step => Lift {(UnloadingLiftPickupIndex+1)} Move Loding Position");
                             LiftStep = Lift_Step.Lift_UnlodingPos_Done;
                             Global.Mlog.Info($"Lift_Step => Next Step : Lift_UnlodingPos_Done");
+
                             for (int i = 0; i < (int)Floor_Index.Max; i++)
-                                SingletonManager.instance.Display_Lift[UnloadingLiftPickupIndex].Floor[i] = true;
+                                SingletonManager.instance.Display_Lift[UnloadingLiftPickupIndex].Floors[i].IsActive = true;
                         }
                     }
                     break;
@@ -2024,7 +2029,7 @@ namespace YJ_AutoUnClamp.Models
                         UnclampFailMessage = $"Unloading Z Down Timeout [Lift {UnloadingLiftIndexY + 1}]\r\n(언로딩 Z 다운 타임아웃)";
                         SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY] = (int)Floor_Index.Max;
                         for (int i =0; i< (int)Floor_Index.Max; i++)
-                            SingletonManager.instance.Display_Lift[UnloadingLiftIndexY].Floor[i] = true;
+                            SingletonManager.instance.Display_Lift[UnloadingLiftIndexY].Floors[i].IsActive = true;
 
                         Global.Mlog.Info(UnclampFailMessage);
                         UnloadYStep = Unload_Y_Step.Idle;
@@ -2041,7 +2046,7 @@ namespace YJ_AutoUnClamp.Models
                             Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, true);
                             _TimeDelay.Restart();
 
-                            UnloadYStep = Unload_Y_Step.Grip_Check;
+                            UnloadYStep = Unload_Y_Step.Centering_Grip_On;
                         }
                         else
                         {
@@ -2051,11 +2056,29 @@ namespace YJ_AutoUnClamp.Models
                                 SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY] = 0;
 
                             int floor = SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY];
-                            SingletonManager.instance.Display_Lift[UnloadingLiftIndexY].Floor[floor] = false;
+                            SingletonManager.instance.Display_Lift[UnloadingLiftIndexY].Floors[floor].IsActive = false;
                             UnloadYStep = Unload_Y_Step.Move_Y_PickUp_Done;
 
                             Global.Mlog.Info($"Unload_Y_Step => Next Floor : {floor.ToString()}");
                         }
+                    }
+                    break;
+                case Unload_Y_Step.Centering_Grip_On:
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_UNGRIP_CYL] == false
+                        && _TimeDelay.ElapsedMilliseconds > SingletonManager.instance.SystemModel.GripDelay)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, false);
+                        _TimeDelay.Restart();
+                        UnloadYStep = Unload_Y_Step.Centering_Grip_Off;
+
+                    }
+                    break;
+                case Unload_Y_Step.Centering_Grip_Off:
+                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_UNGRIP_CYL] == true)
+                    {
+                        Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, true);
+                        _TimeDelay.Restart();
+                        UnloadYStep = Unload_Y_Step.Grip_Check;
                     }
                     break;
                 case Unload_Y_Step.Grip_Check:
@@ -2139,7 +2162,7 @@ namespace YJ_AutoUnClamp.Models
                         if (SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY] < 0)
                             SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY] = 0;
                         int floor = SingletonManager.instance.UnLoadFloor[UnloadingLiftIndexY];
-                        SingletonManager.instance.Display_Lift[UnloadingLiftIndexY].Floor[floor] = false;
+                        SingletonManager.instance.Display_Lift[UnloadingLiftIndexY].Floors[floor].IsActive = false;
                        
                         UnloadYStep = Unload_Y_Step.Idle;
                         Global.Mlog.Info($"Unload_Y_Step => Next Floor : {floor.ToString()}");

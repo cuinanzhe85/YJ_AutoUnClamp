@@ -98,9 +98,9 @@
                     </Border>
 
                     <!--Lift 1-->
-                    <ContentControl Grid.Row="2" Grid.Column="0" Content="{Binding LiftData[0]}" ContentTemplate="{StaticResource FloorTemplate}"/>
-                    <ContentControl Grid.Row="1" Grid.Column="0" Content="{Binding LiftData[1]}" ContentTemplate="{StaticResource FloorTemplate}"/>
-                    <ContentControl Grid.Row="0" Grid.Column="0" Content="{Binding LiftData[2]}" ContentTemplate="{StaticResource FloorTemplate}"/>
+                    <ContentControl Grid.Row="2" Grid.Column="0" Content="{Binding LiftData[0]}" ContentTemplate="{StaticResource FloorTemplate}" Margin="0,0,0,5"/>
+                    <ContentControl Grid.Row="1" Grid.Column="0" Content="{Binding LiftData[1]}" ContentTemplate="{StaticResource FloorTemplate}" Margin="0,0,0,5"/>
+                    <ContentControl Grid.Row="0" Grid.Column="0" Content="{Binding LiftData[2]}" ContentTemplate="{StaticResource FloorTemplate}" Margin="0,0,0,5"/>
                     <!--UnLoding Y-->
                     <Grid Grid.Column="1" Grid.Row="0" Margin="5,10,5,-10">
                         <Grid.RowDefinitions>

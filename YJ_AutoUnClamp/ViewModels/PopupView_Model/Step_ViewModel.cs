@@ -98,7 +98,7 @@ namespace YJ_AutoUnClamp.ViewModels.PopupView_Model
                 Step_Model[0].UnloadYStep = (int)unitModel[(int)MotionUnit_List.In_Y].UnloadYStep;
                 Step_Model[0].UnloadXlStep = (int)unitModel[(int)MotionUnit_List.In_Y].UnloadXlStep;
                 Step_Model[0].UnloadCvStep = (int)unitModel[(int)MotionUnit_List.In_CV].UnloadCvStep;
-                Step_Model[0].NgCVStep = (int)unitModel[(int)MotionUnit_List.In_CV].NgCVStep;
+                Step_Model[0].NgCVStep = (int)unitModel[(int)MotionUnit_List.Out_CV].NgCVStep;
                 Step_Model[0].LiftStep = (int)unitModel[(int)MotionUnit_List.Lift_1].LiftStep;
             }
         }

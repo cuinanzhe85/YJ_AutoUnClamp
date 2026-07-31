@@ -542,14 +542,15 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         private void OnTeachingMove_Command(object obj)
         {
+            if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+            {
+                return;
+            }
             string cmd = obj.ToString();
             switch (cmd)
             {
                 case "Top_X":
-                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
-                    {
-                        return;
-                    }
+                    
                     if (Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.BOTTOM_RETURN_X_LEFT] != true)
                     {
                         Global.instance.ShowMessagebox("Bottom Return is not Left Position");
@@ -561,10 +562,7 @@ namespace YJ_AutoUnClamp.ViewModels
                     }
                     break;
                 case "In_Y":
-                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
-                    {
-                        return;
-                    }
+                    
                     if (EzModel.IsMoveReadyPosZ() == false)
                     {
                         Global.instance.ShowMessagebox("Z is not ready position.");
@@ -581,20 +579,12 @@ namespace YJ_AutoUnClamp.ViewModels
                     }
                     break;
                 case "In_Z":
-                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
-                    {
-                        return;
-                    }
                     if (EzModel.MoveABS((int)ServoSlave_List.In_Z_Handler_Z, TeachPosition[(int)TeachingSection.In_Z]) == false)
                     {
                         Global.instance.ShowMessagebox("UnLoading Z Servo Move Fail");
                     }
                     break;
                 case "Lift":
-                    if (MessageBox.Show($"Do you want to move servo to target position?", "Servo Move", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
-                    {
-                        return;
-                    }
                     if (EzModel.MoveABS((int)ServoSlave_List.Lift_1_Z + Selected_LiftIndex, TeachPosition[(int)TeachingSection.Lift])== false)
                     {
                         Global.instance.ShowMessagebox("Lift Servo Move Fail");

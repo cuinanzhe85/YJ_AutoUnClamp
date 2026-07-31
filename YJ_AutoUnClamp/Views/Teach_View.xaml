@@ -262,7 +262,14 @@
                             <RowDefinition Height="0.6*"/>
                             <RowDefinition Height="0.4*"/>
                         </Grid.RowDefinitions>
-                        <Label Content="{Binding TeachPosition[2]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        <Grid Grid.Row="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Label Content="Position" Style="{StaticResource TeachingHeader_LabelStyle}"/>
+                            <Label Grid.Row="1" Content="{Binding TeachPosition[2]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        </Grid>
                         <Grid Grid.Row="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -273,7 +280,6 @@
                             <telerik:RadButton Grid.Column="1" Content="Save" Style="{StaticResource Save_ButtonStyle}" Background="DarkCyan"
                                                 Command="{Binding TeachingSave_Command}" CommandParameter="Top_X"/>
                         </Grid>
-
                     </Grid>
                     <Grid Grid.Column="1">
                         <Grid.ColumnDefinitions>
@@ -305,7 +311,14 @@
                             <RowDefinition Height="0.6*"/>
                             <RowDefinition Height="0.4*"/>
                         </Grid.RowDefinitions>
-                        <Label Content="{Binding TeachPosition[0]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        <Grid Grid.Row="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Label Content="Position" Style="{StaticResource TeachingHeader_LabelStyle}"/>
+                            <Label Grid.Row="1" Content="{Binding TeachPosition[0]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        </Grid>
                         <Grid Grid.Row="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -359,7 +372,14 @@
                             <RowDefinition Height="0.6*"/>
                             <RowDefinition Height="0.4*"/>
                         </Grid.RowDefinitions>
-                        <Label Grid.Row="0" Content="{Binding TeachPosition[1]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        <Grid Grid.Row="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Label Content="Position" Style="{StaticResource TeachingHeader_LabelStyle}"/>
+                            <Label Grid.Row="1" Content="{Binding TeachPosition[1]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        </Grid>
                         <Grid Grid.Row="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -384,9 +404,9 @@
                                     IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=5, Mode=TwoWay}"/>
                         <telerik:RadRadioButton Grid.Column="1" Grid.Row="0" Content="Put Down" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                     IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=6, Mode=TwoWay}"/>
-
                         <Grid Grid.Row="1" Grid.ColumnSpan="2">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -403,9 +423,9 @@
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=10, Mode=TwoWay}" Margin="2,5,2,5"/>
                             <telerik:RadRadioButton Grid.Column="4" Content="5F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=11, Mode=TwoWay}" Margin="2,5,2,5"/>
-                            <!--<telerik:RadRadioButton Grid.Column="5" Content="6F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <telerik:RadRadioButton Grid.Column="5" Content="6F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=12, Mode=TwoWay}" Margin="2,5,2,5"/>
-                            <telerik:RadRadioButton Grid.Column="6" Content="7F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Handler"
+                            <!--<telerik:RadRadioButton Grid.Column="6" Content="7F" Style="{StaticResource Radio_ButtonStyle}" CommandParameter="In_Z"
                                         IsChecked="{Binding TeachingIndex, Converter={StaticResource IndexToCheckedConverter}, ConverterParameter=13, Mode=TwoWay}" Margin="2,5,5,5"/>-->
                         </Grid>
                     </Grid>
@@ -423,7 +443,14 @@
                             <RowDefinition Height="0.6*"/>
                             <RowDefinition Height="0.4*"/>
                         </Grid.RowDefinitions>
-                        <Label Content="{Binding TeachPosition[3]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        <Grid Grid.Row="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Label Content="Position" Style="{StaticResource TeachingHeader_LabelStyle}"/>
+                            <Label Grid.Row="1" Content="{Binding TeachPosition[3]}" ContentStringFormat="{}{0:F2}" Style="{StaticResource TeachingValue_LabelStyle}"/>
+                        </Grid>
                         <Grid Grid.Row="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
