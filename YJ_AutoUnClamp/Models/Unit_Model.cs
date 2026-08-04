@@ -223,8 +223,6 @@ namespace YJ_AutoUnClamp.Models
             Move_Y_PickUp_Done,
             Move_Z_PickUp_Down_Done,
             Grip_Detect_Check,
-            Centering_Grip_On,
-            Centering_Grip_Off,
             Grip_Check,
             Move_Z_Ready_Done,
             Move_Y_PutDown_Done,
@@ -2048,7 +2046,7 @@ namespace YJ_AutoUnClamp.Models
                             Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, true);
                             _TimeDelay.Restart();
 
-                            UnloadYStep = Unload_Y_Step.Centering_Grip_On;
+                            UnloadYStep = Unload_Y_Step.Grip_Check;
                         }
                         else
                         {
@@ -2063,24 +2061,6 @@ namespace YJ_AutoUnClamp.Models
 
                             Global.Mlog.Info($"Unload_Y_Step => Next Floor : {floor.ToString()}");
                         }
-                    }
-                    break;
-                case Unload_Y_Step.Centering_Grip_On:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_UNGRIP_CYL] == false
-                        && _TimeDelay.ElapsedMilliseconds > SingletonManager.instance.SystemModel.GripDelay)
-                    {
-                        Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, false);
-                        _TimeDelay.Restart();
-                        UnloadYStep = Unload_Y_Step.Centering_Grip_Off;
-
-                    }
-                    break;
-                case Unload_Y_Step.Centering_Grip_Off:
-                    if (Dio.DI_RAW_DATA[(int)DI_MAP.UNLOAD_LD_Z_UNGRIP_CYL] == true)
-                    {
-                        Dio_Output(DO_MAP.UNLOAD_LD_Z_GRIP, true);
-                        _TimeDelay.Restart();
-                        UnloadYStep = Unload_Y_Step.Grip_Check;
                     }
                     break;
                 case Unload_Y_Step.Grip_Check:

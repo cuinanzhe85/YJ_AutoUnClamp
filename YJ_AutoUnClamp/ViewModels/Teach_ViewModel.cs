@@ -347,7 +347,7 @@ namespace YJ_AutoUnClamp.ViewModels
         {
             for (int i = 0; i < (int)ServoSlave_List.Max; i++)
             {
-                if (ServoModel[i].IsServoOn == true)
+                if (EzModel.IsMoveDone(i) == false)
                     EzModel.ServoStop(i);
             }
         }
@@ -410,6 +410,11 @@ namespace YJ_AutoUnClamp.ViewModels
         }
         private void OnServoMove_Command(object obj)
         {
+            if (Global.instance.IsSafetyInterlockActive() == true)
+            {
+                MoveAllStop();
+                return;
+            }
             switch (obj.ToString())
             {
                 case "Home":
@@ -546,6 +551,8 @@ namespace YJ_AutoUnClamp.ViewModels
             {
                 return;
             }
+            if (Global.instance.IsSafetyInterlockActive() == true)
+                return;
             string cmd = obj.ToString();
             switch (cmd)
             {
