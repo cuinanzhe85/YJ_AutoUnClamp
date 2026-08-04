@@ -72,6 +72,24 @@ namespace YJ_AutoUnClamp
             get { return _Safety_NowTime; }
             set { SetValue(ref _Safety_NowTime, value); }
         }
+        private string _DepartmentName = "SmartFactory Group(MX)";
+        public string DepartmentName
+        {
+            get { return _DepartmentName; }
+            set { SetValue(ref _DepartmentName, value); }
+        }
+        private string _SoftwareName = "AUTO UNCLAMP";
+        public string SoftwareName
+        {
+            get { return _SoftwareName; }
+            set { SetValue(ref _SoftwareName, value); }
+        }
+        private string _SoftwareVersion = "260731.01";
+        public string SoftwareVersion
+        {
+            get { return _SoftwareVersion; }
+            set { SetValue(ref _SoftwareVersion, value); }
+        }
         // Etc
         public string IniConfigPath { get; set; } = Environment.CurrentDirectory + @"\Config";
         public string IniSystemPath { get; set; } = Environment.CurrentDirectory + @"\Config\System.ini";
@@ -260,7 +278,10 @@ namespace YJ_AutoUnClamp
                 long milliseconds = elapsedMs % 1000;
                 //SingletonManager.instance.Channel_Model[0].TactTime = $"{minutes:D2}:{seconds:D2}:{milliseconds:D2}";
                 double tt = Math.Round((TactTimeSw.ElapsedMilliseconds / 1000.0), 1);
-;                SingletonManager.instance.Channel_Model[0].TactTime = tt.ToString();
+                if (tt > 60.0)
+                    UnLoadingTactTimeReset();
+                else
+                    SingletonManager.instance.Channel_Model[0].TactTime = tt.ToString("F1");
             }
         }
         public void AverageTacttimeUpdate()

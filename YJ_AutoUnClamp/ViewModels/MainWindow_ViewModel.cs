@@ -42,24 +42,7 @@ namespace YJ_AutoUnClamp.ViewModels
         private readonly Dictionary<MainWindow_PopupList, Func<(Window, Child_ViewModel)>> PopupFactories;
         #endregion
 
-        private string _DepartmentName = "SmartFactory Group(MX)";
-        public string DepartmentName
-        {
-            get { return _DepartmentName; }
-            set { SetValue(ref _DepartmentName, value); }
-        }
-        private string _SoftwareName = "AUTO UNCLAMP";
-        public string SoftwareName
-        {
-            get { return _SoftwareName; }
-            set { SetValue(ref _SoftwareName, value); }
-        }
-        private string _SoftwareVersion = "260731.01";
-        public string SoftwareVersion
-        {
-            get { return _SoftwareVersion; }
-            set { SetValue(ref _SoftwareVersion, value); }
-        }
+        
         private ListBox _LogList = new ListBox();
         public ListBox LogList
         {

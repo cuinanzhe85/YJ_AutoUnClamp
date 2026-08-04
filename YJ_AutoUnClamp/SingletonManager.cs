@@ -66,7 +66,19 @@ namespace YJ_AutoUnClamp
             get { return _TeachFileName; }
             set { SetValue(ref _TeachFileName, value); }
         }
-        
+        private bool _IsInputStop = false;
+        public bool IsInputStop
+        {
+            get { return _IsInputStop; }
+            set { SetValue(ref _IsInputStop, value); }
+        }
+        private bool _IsOutputStop = false;
+        public bool IsOutputStop
+        {
+            get { return _IsOutputStop; }
+            set { SetValue(ref _IsOutputStop, value); }
+        }
+
         // Default Infomation
         public EquipmentMode EquipmentMode { get; set; } = EquipmentMode.Auto;
 
@@ -490,7 +502,7 @@ namespace YJ_AutoUnClamp
                             || !Dio.DI_RAW_DATA[(int)EziDio_Model.DI_MAP.REAR_OP_EMERGENCY_FEEDBACK])
                         {
                             Global.instance.SafetyErrorMessage = "EMERGENCY Button Operation! ";
-                            IsSafetyInterLock = true;
+                            //IsSafetyInterLock = true;
                         }
                         if (IsSafetyInterLock == true)
                         {

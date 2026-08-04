@@ -89,6 +89,20 @@ namespace YJ_AutoUnClamp.ViewModels
                 if (SingletonManager.instance.IsInspectionStart == true)
                     Global.instance.InspectionStop();
             }
+            else if (cmd == "InputStop")
+            {
+                if (SingletonManager.instance.IsInputStop == false)
+                    SingletonManager.instance.IsInputStop = true;
+                else
+                    SingletonManager.instance.IsInputStop = false;
+            }
+            else if (cmd == "OutputStop")
+            {
+                if (SingletonManager.instance.IsOutputStop == false)
+                    SingletonManager.instance.IsOutputStop = true;
+                else
+                    SingletonManager.instance.IsOutputStop = false;
+            }
             else
             {
                 if (SingletonManager.instance.IsInspectionStart == true)

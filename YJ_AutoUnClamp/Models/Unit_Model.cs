@@ -329,11 +329,14 @@ namespace YJ_AutoUnClamp.Models
                         && Dio.DO_RAW_DATA[(int)DO_MAP.UNCLAMP_CV_RUN] == false)
                         || SingletonManager.instance.EquipmentMode == EquipmentMode.Dry)
                     {
-                         Dio_Output(DO_MAP.UNCLAMP_CV_CENTERING, true);
-                         Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, true);
-                         UnClampStep = UnClampHandStep.Top_Hand_PickUp_Down_Check;
-                        _TimeDelay.Restart();
-                        Global.Mlog.Info($"UnClampHandStep => Next Step : Top_Hand_PickUp_Down_Check");
+                        if (SingletonManager.instance.IsOutputStop == false)
+                        {
+                            Dio_Output(DO_MAP.UNCLAMP_CV_CENTERING, true);
+                            Dio_Output(DO_MAP.UNCLAMP_LEFT_Z_DOWN, true);
+                            UnClampStep = UnClampHandStep.Top_Hand_PickUp_Down_Check;
+                            _TimeDelay.Restart();
+                            Global.Mlog.Info($"UnClampHandStep => Next Step : Top_Hand_PickUp_Down_Check");
+                        }
                     }
                     break;
                 case UnClampHandStep.Top_Hand_PickUp_Down_Check:
@@ -1073,7 +1076,7 @@ namespace YJ_AutoUnClamp.Models
                     break;
                 case Lift_Step.Clamp_IF_Wait:
                     // Clamp Interface 기다린다
-                    //if (Ez_Model.IsMoveReadyPosY() == true)
+                    if (SingletonManager.instance.IsInputStop == false)
                     {
                         // Up 1
                         if (Dio.DI_RAW_DATA[(int)DI_MAP.AGING_CV_1_UPPER_INTERFACE] == true
@@ -1633,7 +1636,6 @@ namespace YJ_AutoUnClamp.Models
                         _UnloadingCVTimer.Reset();
                         if (Dio.DO_RAW_DATA[(int)DO_MAP.INPUT_LIFT_SET_CV_RUN] == true)
                             Dio_Output(DO_MAP.INPUT_LIFT_SET_CV_RUN, false);
-                        Global.instance.UnLoadingTactTimeReset();
                     }
                     break;
                 case Unload_CV_Step.MesSend_CvStop:

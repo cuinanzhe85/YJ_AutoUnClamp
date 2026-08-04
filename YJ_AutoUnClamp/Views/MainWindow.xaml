@@ -36,10 +36,10 @@
                 <!--<Label Content="{Binding DepartmentName}" Style="{StaticResource MainWindow_DepartmentLabelStyle}"/>-->
                 <TextBlock Style="{StaticResource MainWindow_TopTbStyle}" Margin="10">
                     <Run Text="{Binding Source={x:Static local:Global.instance},Path=NowDate}"/><LineBreak/>
-                    <Run Text="{Binding DepartmentName}"/>
+                    <Run Text="{Binding Source={x:Static local:Global.instance},Path=DepartmentName}"/>
                 </TextBlock>
                 <!--설비명-->
-                <Label Grid.Column="1" Content="{Binding SoftwareName}" Style="{StaticResource MainWindow_HeaderLabelStyle}">
+                <Label Grid.Column="1" Content="{Binding Source={x:Static local:Global.instance},Path=SoftwareName}" Style="{StaticResource MainWindow_HeaderLabelStyle}">
                     <Label.InputBindings>
                         <MouseBinding Gesture="LeftClick" Command="{Binding BottomMenu_ButtonCommands}" CommandParameter="StepViewer"/>
                     </Label.InputBindings>
@@ -49,7 +49,7 @@
                     <Run Text="Model :"/>
                     <Run Text="{Binding Source={x:Static local:SingletonManager.instance}, Path=TeachFileName}"/><LineBreak/>
                     <Run Text="Version : " />
-                    <Run Text="{Binding SoftwareVersion}"/>
+                    <Run Text="{Binding Source={x:Static local:Global.instance},Path=SoftwareVersion}"/>
 
                 </TextBlock>
             </Grid>
